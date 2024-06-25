@@ -4,8 +4,7 @@ import (
 	"github.com/xlzd/gotp"
 )
 
-
-func GenerateTOTP(secret string) (string, int64) {
-	return gotp.NewDefaultTOTP(secret).NowWithExpiration()
+func GenerateTOTP(utf8string string) (string, int64) {
+	return gotp.NewDefaultTOTP(utf8string).NowWithExpiration()
 }
 

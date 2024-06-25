@@ -5,6 +5,7 @@ package screens
 
 import (
 	"fmt"
+	"go2fa/internal/addkey"
 	"os"
 	"strings"
 
@@ -22,8 +23,9 @@ var (
 	noStyle             = lipgloss.NewStyle()
 	cursorModeHelpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	helpStyleInput      = blurredStyle
-	focusedButton = focusedStyle.Padding(0,2).Render("[ Add ]")
+	focusedButton = focusedStyle.Padding(0,2).Bold(true).Render("[Add]")
 	blurredButton = blurredStyle.Padding(0,2).Render("[Add]")
+	errorText = lipgloss.NewStyle().Padding(0,2).Bold(true).Foreground(lipgloss.Color("#FF7575"))
 
 )
 
@@ -36,6 +38,7 @@ type screenInputSecret struct {
 	textInputs     []textinput.Model
 	cursorMode cursor.Mode
 	err       error
+	error string
 }
 
 func ScreenInputSecret() screenInputSecret {
@@ -94,8 +97,18 @@ func (m screenInputSecret) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				s := msg.String()
 
 				if s == "enter" && m.focusIndex == len(m.textInputs) {
-					output.ClearScreen()
-					return m, tea.Quit
+					result := addkey.AddKey(m.textInputs)
+
+					if !result {
+						m.focusIndex = 1
+						m.textInputs[2].SetValue("")
+						m.error = "Only base32 symbols and not empty Title/Secret"
+					} else {
+						screen := ListMethodsScreen()
+						screen.list.Select(0)
+						return RootScreen().SwitchScreen(&screen)
+					}
+					
 				}
 
 				// Cycle indexes
@@ -168,6 +181,10 @@ func (m screenInputSecret) View() string {
 	}
 
 	fmt.Fprintf(&b, "\n\n%s\n\n", *button)
+
+	if m.error != "" {
+		fmt.Fprintf(&b, "\n%s\n", errorText.Render(m.error))
+	}
 
 	return b.String()
 }
