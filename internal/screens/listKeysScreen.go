@@ -1,10 +1,12 @@
 package screens
 
 import (
+	"encoding/json"
 	"fmt"
 	"go2fa/internal/twofactor"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -19,8 +21,15 @@ var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 var globalCopied = false
 
+type itemJsonKey struct {
+	Title string `json:"title"`
+	Desc string `json:"desc"`
+	Secret string `json:"secret"`
+}
+
 type itemKey struct {
-	title, desc string
+	title string
+	desc string
 	secret string
 }
 
@@ -114,9 +123,17 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
+		output := termenv.NewOutput(os.Stdout)
+
+		switch msg.String() {
+			case "q", "ctrl+c":
+				output.ClearScreen()
+
+				return m, tea.Quit
+			}
+
 		switch msg.Type {
 			case tea.KeyCtrlC:
-				output := termenv.NewOutput(os.Stdout)
 				output.ClearScreen()
 				return m, tea.Quit
 
@@ -137,13 +154,6 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			default:
 				globalCopied = false
 		}
-
-		switch msg.String() {
-		case "q", "ctrl+c":
-			output := termenv.NewOutput(os.Stdout)
-			output.ClearScreen()
-			return m, tea.Quit
-		}
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
@@ -162,15 +172,42 @@ func (m listKeysModel) View() string {
 }
 
 func ListKeysScreen() listKeysModel {
-	itemKeys := []list.Item{
-		itemKey{title: "Slack", desc: "https://slack.com", secret: "Test1"},
-		itemKey{title: "Redmine", desc: "Tracker egamings", secret: "Test2"},
-		itemKey{title: "Gitlab vcsx", desc: "http://vcsxa.egamings.com", secret: "Test3"},
+	homeDir := os.Getenv("HOME")
+	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "stores", "root.json")
+	jsonFile, err := os.Open(filePath)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer jsonFile.Close()
+
+	var itemKeysList []itemJsonKey
+
+	jsonData, err := io.ReadAll(jsonFile)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = json.Unmarshal(jsonData, &itemKeysList)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var itemKeys []list.Item
+
+	for _, item := range itemKeysList {
+		itemKeys = append(itemKeys, itemKey{
+			title: item.Title,
+			desc:  item.Desc,
+			secret: item.Secret,
+		})
 	}
 
 	m := listKeysModel{
 		list: list.New(itemKeys, ItemDelegate{}, 30, 20),
 	}
+
 	m.list.Title = "Доступные ключи"
 
 	return m
