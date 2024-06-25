@@ -56,7 +56,7 @@ func ScreenInputSecret() screenInputSecret {
 			t.PromptStyle = focusedStyle
 			t.TextStyle = focusedStyle
 		case 1:
-			t.Placeholder = "URL"
+			t.Placeholder = "Описание"
 			t.CharLimit = 128
 		case 2:
 			t.Placeholder = "SecretKey"

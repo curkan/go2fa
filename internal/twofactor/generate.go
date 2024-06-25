@@ -5,8 +5,7 @@ import (
 )
 
 
-func GenerateTOTP(utf8string string) (string, int64) {
-	secret := utf8string
+func GenerateTOTP(secret string) (string, int64) {
 	return gotp.NewDefaultTOTP(secret).NowWithExpiration()
 }
 
