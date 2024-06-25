@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	screen_y := screens.ScreenOne()
+	screen_y := screens.ListMethodsScreen()
 
 	if _, err := tea.NewProgram(screen_y).Run(); err != nil {
 		fmt.Println("Error running program:", err)

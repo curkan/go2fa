@@ -64,7 +64,7 @@ func (m screenTwoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.index = 0
 			}
 
-			screen_y := ScreenOne()
+			screen_y := ListMethodsScreen()
             return RootScreen().SwitchScreen(&screen_y)
 		default:
 			return m, nil
