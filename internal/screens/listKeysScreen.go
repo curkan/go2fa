@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -16,6 +17,12 @@ import (
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
+var globalCopied = false
+
+type itemKey struct {
+	title, desc string
+	secret string
+}
 
 type ItemDelegate struct{}
 type tickMsg struct{}
@@ -26,19 +33,20 @@ func (d ItemDelegate) Spacing() int                            { return 0 }
 func (d ItemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
 	var (
-		title, desc, code  string
+		title, desc, code, secret string
 		exp int64
 		s = list.NewDefaultItemStyles()
 	)
 
 	s.SelectedTitle = s.SelectedTitle.Foreground(lipgloss.Color("#99dd99")).BorderLeftForeground(lipgloss.Color("#7aa37a"))
-	s.SelectedDesc = s.SelectedDesc.Foreground(lipgloss.Color("#7aa37a")).BorderLeftForeground(lipgloss.Color("#7aa37a"))
+	s.SelectedDesc = s.SelectedDesc.Foreground(lipgloss.Color("#7aa37a")).BorderLeftForeground(lipgloss.Color("#7aa37a")).MarginBottom(1)
+	s.NormalDesc = s.NormalDesc.MarginBottom(1)
 
-	if i, ok := listItem.(list.DefaultItem); ok {
-		title = i.Title()
-		desc = i.Description()
-		// code = twofactor.GeneratePassCode(title)
-		code, exp = twofactor.GenerateTOTP(title)
+	if i, ok := listItem.(itemKey); ok {
+		title = i.title
+		desc = i.desc
+		secret = i.secret
+		code, exp = twofactor.GenerateTOTP(secret)
 	} else {
 		return
 	}
@@ -47,6 +55,15 @@ func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	var (
 		isSelected  = index == m.Index()
 	)
+
+	if !isSelected {
+		code = "******"
+	}
+
+	if globalCopied {
+		s.SelectedTitle = s.SelectedTitle.BorderLeftBackground(lipgloss.Color("#7aa37a"))
+		s.SelectedDesc = s.SelectedDesc.BorderLeftBackground(lipgloss.Color("#7aa37a"))
+	}
 
 	width, _, _ := term.GetSize(0)
 	width = 50
@@ -80,9 +97,6 @@ func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fmt.Fprintf(w, "%s%*s%s %ds\n%s", title, padding, " ", code, until, desc)
 }
 
-type itemKey struct {
-	title, desc string
-}
 
 func (i itemKey) Title() string       { return i.title }
 func (i itemKey) Description() string { return i.desc }
@@ -101,9 +115,27 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.Type {
+			case tea.KeyCtrlC:
+				output := termenv.NewOutput(os.Stdout)
+				output.ClearScreen()
+				return m, tea.Quit
+
 			case tea.KeyEsc:
 				screen := ListMethodsScreen()
 				return RootScreen().SwitchScreen(&screen)
+
+			case tea.KeyEnter:
+				item, ok := m.list.SelectedItem().(itemKey)
+
+				if !ok {
+					return m, tick()
+				}
+
+				code, _ := twofactor.GenerateTOTP(item.secret)
+				clipboard.WriteAll(code)
+				globalCopied = true
+			default:
+				globalCopied = false
 		}
 
 		switch msg.String() {
@@ -131,12 +163,14 @@ func (m listKeysModel) View() string {
 
 func ListKeysScreen() listKeysModel {
 	itemKeys := []list.Item{
-		itemKey{title: "Slack", desc: "https://slack.com"},
-		itemKey{title: "Redmine", desc: "Tracker egamings"},
-		itemKey{title: "Gitlab vcsx", desc: "http://vcsxa.egamings.com"},
+		itemKey{title: "Slack", desc: "https://slack.com", secret: "Test1"},
+		itemKey{title: "Redmine", desc: "Tracker egamings", secret: "Test2"},
+		itemKey{title: "Gitlab vcsx", desc: "http://vcsxa.egamings.com", secret: "Test3"},
 	}
 
-	m := listKeysModel{list: list.New(itemKeys, ItemDelegate{}, 30, 20)}
+	m := listKeysModel{
+		list: list.New(itemKeys, ItemDelegate{}, 30, 20),
+	}
 	m.list.Title = "Доступные ключи"
 
 	return m
