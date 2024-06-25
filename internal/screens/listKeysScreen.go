@@ -214,7 +214,7 @@ func ListKeysScreen() listKeysModel {
 }
 
 func tick() tea.Cmd {
-	return tea.Tick(time.Millisecond, func(time.Time) tea.Msg {
+	return tea.Tick(time.Second, func(time.Time) tea.Msg {
 		return tickMsg{}
 	})
 }
