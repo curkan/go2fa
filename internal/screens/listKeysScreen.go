@@ -2,8 +2,10 @@ package screens
 
 import (
 	"fmt"
+	"go2fa/internal/twofactor"
 	"io"
 	"os"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -16,6 +18,8 @@ var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 
 type ItemDelegate struct{}
+type tickMsg struct{}
+
 
 func (d ItemDelegate) Height() int                             { return 1 }
 func (d ItemDelegate) Spacing() int                            { return 0 }
@@ -23,6 +27,7 @@ func (d ItemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
 	var (
 		title, desc, code  string
+		exp int64
 		s = list.NewDefaultItemStyles()
 	)
 
@@ -32,7 +37,8 @@ func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	if i, ok := listItem.(list.DefaultItem); ok {
 		title = i.Title()
 		desc = i.Description()
-		code = "123 123"
+		// code = twofactor.GeneratePassCode(title)
+		code, exp = twofactor.GenerateTOTP(title)
 	} else {
 		return
 	}
@@ -45,6 +51,19 @@ func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	width, _, _ := term.GetSize(0)
 	width = 50
 	padding := 0
+
+	until := exp - time.Now().Unix()
+
+	codeStyle := lipgloss.NewStyle().Bold(true).Blink(true)
+
+	if until <= 15 && until > 5 {
+		codeStyle = codeStyle.Foreground(lipgloss.Color("#FFF0A1"))
+	}
+
+	if until <= 5 {
+		codeStyle = codeStyle.Foreground(lipgloss.Color("#FF7575"))
+	}
+
 	if isSelected && m.FilterState() != list.Filtering {
 		padding = width - len(title) - len(code) - 5
 		title = s.SelectedTitle.Render(title)
@@ -56,8 +75,9 @@ func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	}
 
 
-	fmt.Fprintf(w, "%s%*s%s\n%s", title, padding, " ", code, desc)
-	// fmt.Printf("%s%*s%s\n%s\n", title, padding, "", code, desc)
+	code = codeStyle.Render(code)
+
+	fmt.Fprintf(w, "%s%*s%s %ds\n%s", title, padding, " ", code, until, desc)
 }
 
 type itemKey struct {
@@ -73,7 +93,7 @@ type listKeysModel struct {
 }
 
 func (m listKeysModel) Init() tea.Cmd {
-	return nil
+	return tick()
 }
 
 func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -95,7 +115,8 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
-
+	case tickMsg:
+		return m, tick()
 	}
 
 
@@ -115,13 +136,15 @@ func ListKeysScreen() listKeysModel {
 		itemKey{title: "Gitlab vcsx", desc: "http://vcsxa.egamings.com"},
 	}
 
-	// delegate := list.NewDefaultDelegate()
-	// delegate.Styles.SelectedTitle = delegate.Styles.SelectedTitle.Foreground(lipgloss.Color("#99dd99")).BorderLeftForeground(lipgloss.Color("#7aa37a"))
-	// delegate.Styles.SelectedDesc = delegate.Styles.SelectedDesc.Foreground(lipgloss.Color("#7aa37a")).BorderLeftForeground(lipgloss.Color("#7aa37a"))
-
 	m := listKeysModel{list: list.New(itemKeys, ItemDelegate{}, 30, 20)}
-	// m := listKeysModel{list: list.New(itemKeys, list.NewDefaultDelegate(), 30, 20)}
 	m.list.Title = "Доступные ключи"
 
 	return m
 }
+
+func tick() tea.Cmd {
+	return tea.Tick(time.Millisecond, func(time.Time) tea.Msg {
+		return tickMsg{}
+	})
+}
+
