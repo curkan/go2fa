@@ -208,7 +208,7 @@ func ListKeysScreen() listKeysModel {
 		list: list.New(itemKeys, ItemDelegate{}, 30, 20),
 	}
 
-	m.list.Title = "Доступные ключи"
+	m.list.Title = "Active Keys"
 
 	return m
 }

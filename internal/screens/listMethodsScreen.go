@@ -54,8 +54,8 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 func ListMethodsScreen() model {
 	items := []list.Item{
-		item{ title: "Показать ключи", alias: "show_keys" },
-		item{ title: "Добавить ключ", alias: "add_key" },
+		item{ title: "Show keys", alias: "show_keys" },
+		item{ title: "Add key", alias: "add_key" },
 	}
 
 	const defaultWidth = 20
@@ -127,10 +127,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	// if m.choice != "" {
-	// 	return quitTextStyle.Render(fmt.Sprintf("%s? Sounds good to me.", m.choice))
-	// }
-
 	return "\n" + m.list.View()
 }
 

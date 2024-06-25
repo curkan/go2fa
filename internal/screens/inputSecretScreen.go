@@ -22,8 +22,8 @@ var (
 	noStyle             = lipgloss.NewStyle()
 	cursorModeHelpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
 	helpStyleInput      = blurredStyle
-	focusedButton = focusedStyle.Padding(0,2).Render("[ Добавить ]")
-	blurredButton = blurredStyle.Padding(0,2).Render("[Добавить]")
+	focusedButton = focusedStyle.Padding(0,2).Render("[ Add ]")
+	blurredButton = blurredStyle.Padding(0,2).Render("[Add]")
 
 )
 
@@ -51,12 +51,12 @@ func ScreenInputSecret() screenInputSecret {
 
 		switch i {
 		case 0:
-			t.Placeholder = "Название"
+			t.Placeholder = "Title"
 			t.Focus()
 			t.PromptStyle = focusedStyle
 			t.TextStyle = focusedStyle
 		case 1:
-			t.Placeholder = "Описание"
+			t.Placeholder = "Description"
 			t.CharLimit = 128
 		case 2:
 			t.Placeholder = "SecretKey"
@@ -127,9 +127,6 @@ func (m screenInputSecret) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 				return m, tea.Batch(cmds...)
-
-				// secretKey := m.textInput.Value()
-				// fmt.Print(secretKey)
 		}
 
 	// We handle errors just like any other message
@@ -154,13 +151,12 @@ func (m *screenInputSecret) updateInputs(msg tea.Msg) tea.Cmd {
 
 func (m screenInputSecret) View() string {
 	var b strings.Builder
-	b.WriteString(lipgloss.NewStyle().MarginTop(1).MarginLeft(2).Foreground(lipgloss.Color("0")).Background(lipgloss.Color("#FFFFFF")).Padding(0, 5, 0, 5).Render(fmt.Sprintf("Добавление ключа")))
+	b.WriteString(lipgloss.NewStyle().MarginTop(1).MarginLeft(2).Foreground(lipgloss.Color("0")).Background(lipgloss.Color("#FFFFFF")).Padding(0, 5, 0, 5).Render(fmt.Sprintf("Add key")))
 
 	fmt.Fprintf(&b, "\n\n")
 
 	for i := range m.textInputs {
 		b.WriteString(lipgloss.NewStyle().Padding(0,2).Render(m.textInputs[i].View()))
-		// b.WriteString(m.textInputs[i].View())
 		if i < len(m.textInputs)-1 {
 			b.WriteRune('\n')
 		}
