@@ -2,11 +2,11 @@ package twofactor
 
 import (
 	"encoding/base32"
-	"fmt"
 	"time"
 
 	otp "github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
+	"github.com/xlzd/gotp"
 )
 
 func GeneratePassCode(utf8string string) string {
@@ -26,6 +26,9 @@ func GeneratePassCode(utf8string string) string {
 	return passcode
 }
 
-func main() {
-	fmt.Println(GeneratePassCode("TETS"))
+
+func GenerateTOTP(utf8string string) (string, int64) {
+	secret := base32.StdEncoding.EncodeToString([]byte(utf8string))
+	return gotp.NewDefaultTOTP(secret).NowWithExpiration()
 }
+
