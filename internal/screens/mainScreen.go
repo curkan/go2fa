@@ -9,13 +9,8 @@ type rootScreenModel struct {
 func RootScreen() rootScreenModel {
     var rootModel tea.Model
 
-    if (true) {
-        screen_one := ScreenOne()
-        rootModel = &screen_one
-    } else {
-        screen_two := ScreenTwo()
-        rootModel = &screen_two
-    }
+	screen_one := ListMethodsScreen()
+	rootModel = &screen_one
 
     return rootScreenModel{
         model: rootModel,

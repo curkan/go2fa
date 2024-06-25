@@ -22,7 +22,10 @@ var (
 	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
 )
 
-type item string
+type item struct{
+	alias string
+	title string
+}
 
 func (i item) FilterValue() string { return "" }
 
@@ -37,7 +40,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 
-	str := fmt.Sprintf("%d. %s", index+1, i)
+	str := fmt.Sprintf("%d. %s", index+1, i.title)
 
 	fn := itemStyle.Render
 	if index == m.Index() {
@@ -49,10 +52,10 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fmt.Fprint(w, fn(str))
 }
 
-func ScreenOne() model {
+func ListMethodsScreen() model {
 	items := []list.Item{
-		item("Показать ключи"),
-		item("Добавить ключ"),
+		item{ title: "Показать ключи", alias: "show_keys" },
+		item{ title: "Добавить ключ", alias: "add_key" },
 	}
 
 	const defaultWidth = 20
@@ -72,7 +75,6 @@ func ScreenOne() model {
 
 type model struct {
 	list     list.Model
-	choice   string
 	quitting bool
 	output   *termenv.Output
 }
@@ -104,8 +106,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 
 			case tea.KeyEnter:
-				screen_y := ScreenInputSecret()
-				return RootScreen().SwitchScreen(&screen_y)
+				item, ok := m.list.SelectedItem().(item)
+				if ok {
+					if item.alias == "add_key" {
+						screen_y := ScreenInputSecret()
+						return RootScreen().SwitchScreen(&screen_y)
+					}
+
+					if item.alias == "show_keys" {
+						screen_y := ListKeysScreen()
+						return RootScreen().SwitchScreen(&screen_y)
+					}
+				}
 		}
 	}
 
@@ -115,9 +127,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	if m.choice != "" {
-		return quitTextStyle.Render(fmt.Sprintf("%s? Sounds good to me.", m.choice))
-	}
+	// if m.choice != "" {
+	// 	return quitTextStyle.Render(fmt.Sprintf("%s? Sounds good to me.", m.choice))
+	// }
 
 	return "\n" + m.list.View()
 }
