@@ -3,10 +3,11 @@ package screens
 import (
 	"encoding/json"
 	"fmt"
+	"go2fa/internal/crypto"
+	"go2fa/internal/structure"
 	"go2fa/internal/twofactor"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -20,12 +21,6 @@ import (
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 var globalCopied = false
-
-type itemJsonKey struct {
-	Title string `json:"title"`
-	Desc string `json:"desc"`
-	Secret string `json:"secret"`
-}
 
 type itemKey struct {
 	title string
@@ -172,24 +167,10 @@ func (m listKeysModel) View() string {
 }
 
 func ListKeysScreen() listKeysModel {
-	homeDir := os.Getenv("HOME")
-	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "stores", "root.json")
-	jsonFile, err := os.Open(filePath)
+	var itemKeysList []structure.TwoFactorItem
+	vault := crypto.GetDataVault()
 
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer jsonFile.Close()
-
-	var itemKeysList []itemJsonKey
-
-	jsonData, err := io.ReadAll(jsonFile)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	err = json.Unmarshal(jsonData, &itemKeysList)
+	err := json.Unmarshal([]byte(vault.Db), &itemKeysList)
 	if err != nil {
 		fmt.Println(err)
 	}
