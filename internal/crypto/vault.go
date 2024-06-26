@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -85,7 +86,9 @@ func backupVault() bool {
 
 func GetDataVault() vault {
 	vault := toData()
-	db, _ := base64.StdEncoding.DecodeString(vault.Db)
+	valueDb, _ := hex.DecodeString(vault.Db)
+	decrpytDb, _ := Decrypt([]byte("test123"), valueDb)
+	db, _ := base64.StdEncoding.DecodeString(string(decrpytDb))
 	vault.Db = string(db)
 
 	return vault
@@ -97,7 +100,9 @@ func SetDataVault(vault vault) bool {
 	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "stores", "vault.json")
 
 	db := base64.StdEncoding.EncodeToString([]byte(vault.Db))
-	vault.Db = string(db)
+	cryptDb, _ := Encrypt([]byte("test123"), []byte(db))
+	vault.Db = hex.EncodeToString(cryptDb)
+
 	vault.Iterator = vault.Iterator + 1
 	data, _ := json.Marshal(vault)
 

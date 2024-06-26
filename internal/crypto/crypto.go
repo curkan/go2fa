@@ -1,11 +1,13 @@
 package crypto
 
 import (
-    "crypto/aes"
-    "crypto/cipher"
-    "crypto/rand"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/hex"
 
-    "golang.org/x/crypto/scrypt"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/scrypt"
 )
 
 func Encrypt(key, data []byte) ([]byte, error) {
@@ -37,12 +39,19 @@ func Encrypt(key, data []byte) ([]byte, error) {
 }
 
 func Decrypt(key, data []byte) ([]byte, error) {
-    salt, data := data[len(data)-32:], data[:len(data)-32]
+    // key, data = data[len(data)-32:], data[:len(data)-32]
+    _, data = data[len(data)-32:], data[:len(data)-32]
 
-    key, _, err := DeriveKey(key, salt)
-    if err != nil {
-        return nil, err
-    }
+    // key, _, err := DeriveKey(key, salt)
+    // if err != nil {
+    //     return nil, err
+    // }
+	// logrus.Fatal(hex.EncodeToString(key))
+	key, err := hex.DecodeString(GetSessionHashKey().hash)
+
+	if err != nil {
+		logrus.Fatal(err)
+	}
 
     blockCipher, err := aes.NewCipher(key)
     if err != nil {
@@ -57,6 +66,7 @@ func Decrypt(key, data []byte) ([]byte, error) {
     nonce, ciphertext := data[:gcm.NonceSize()], data[gcm.NonceSize():]
 
     plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+
     if err != nil {
         return nil, err
     }
