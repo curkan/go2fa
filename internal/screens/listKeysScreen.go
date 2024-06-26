@@ -108,6 +108,7 @@ func (i itemKey) FilterValue() string { return i.title }
 
 type listKeysModel struct {
 	list list.Model
+	itemsKeysList []structure.TwoFactorItem
 }
 
 func (m listKeysModel) Init() tea.Cmd {
@@ -125,6 +126,24 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				output.ClearScreen()
 
 				return m, tea.Quit
+			case "d": 
+				item, ok := m.list.SelectedItem().(itemKey)
+
+				if !ok {
+					return m, tick()
+				}
+
+				twoFactorItem := structure.TwoFactorItem{
+					Title: item.title,
+					Desc: item.desc,
+					Secret: item.secret,
+				}
+
+				//TODO: Сделать удаление, сравнивать текущий срез с другими, и если найден такой, то удаляем
+				//Сделать бекап при изменении структуры
+
+				screen := ScreenDeleteKey(m.itemsKeysList, twoFactorItem)
+				return RootScreen().SwitchScreen(&screen)
 			}
 
 		switch msg.Type {
@@ -187,6 +206,7 @@ func ListKeysScreen() listKeysModel {
 
 	m := listKeysModel{
 		list: list.New(itemKeys, ItemDelegate{}, 30, 20),
+		itemsKeysList: itemKeysList,
 	}
 
 	m.list.Title = "Active Keys"
