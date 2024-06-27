@@ -84,7 +84,8 @@ func (m screenInputSecret) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case tea.KeyEsc:
 				screen := ListMethodsScreen()
 				screen.list.Select(1)
-				return RootScreen().SwitchScreen(&screen)
+
+				return screen, screen.Init()
 
 			case tea.KeyCtrlC:
 				output.ClearScreen()

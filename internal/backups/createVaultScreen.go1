@@ -1,0 +1,97 @@
+package screens
+
+import (
+	"go2fa/internal/vault"
+	"os"
+
+	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/muesli/termenv"
+)
+
+
+func CreateVaultScreen() createVaultModel {
+	items := []list.Item{
+		item{ title: "Create vault", alias: "create_vault" },
+		item{ title: "Exit", alias: "exit" },
+	}
+
+	const defaultWidth = 20
+
+	l := list.New(items, itemDelegate{}, defaultWidth, listHeight)
+	l.SetShowTitle(false)
+	l.Styles.PaginationStyle = paginationStyle
+	l.SetShowStatusBar(false)
+	l.SetFilteringEnabled(false)
+
+	output := termenv.NewOutput(os.Stdout)
+	return createVaultModel{list: l, output: output}
+}
+
+type createVaultModel struct {
+	list     list.Model
+	quitting bool
+	output   *termenv.Output
+}
+
+func (m createVaultModel) Init() tea.Cmd {
+	return tea.SetWindowTitle("Go2FA")
+}
+
+func (m createVaultModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.list.SetWidth(msg.Width)
+
+		return m, nil
+
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "q", "esc":
+			m.quitting = true
+			m.output.ClearScreen()
+
+			return m, tea.Quit
+		}
+
+		switch msg.Type {
+			case tea.KeyCtrlC:
+				m.quitting = true
+				m.output.ClearScreen()
+
+				return m, tea.Quit
+
+			case tea.KeyEnter:
+				item, ok := m.list.SelectedItem().(item)
+				if ok {
+					if item.alias == "create_vault" {
+						result := vault.Create()
+
+						if result {
+							screen_y := ListMethodsScreen()
+							return RootScreen().SwitchScreen(&screen_y)
+						}
+					}
+
+					if item.alias == "exit" {
+						m.quitting = true
+						m.output.ClearScreen()
+
+						return m, tea.Quit
+					}
+				}
+
+		}
+	}
+
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	return m, cmd
+}
+
+func (m createVaultModel) View() string {
+	text := titleStyle.Padding(0, 2, 0, 2).Render("Ваши ключи шифруются с помощью\nассиметричного шифрования.\n\nСоздаем хранилище?")
+
+	return text + "\n\n" + m.list.View()
+}
+
