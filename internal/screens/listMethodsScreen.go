@@ -52,7 +52,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fmt.Fprint(w, fn(str))
 }
 
-func ListMethodsScreen() model {
+func ListMethodsScreen() ListMethodsModel {
 	items := []list.Item{
 		item{ title: "Show keys", alias: "show_keys" },
 		item{ title: "Add key", alias: "add_key" },
@@ -68,22 +68,20 @@ func ListMethodsScreen() model {
 	l.SetFilteringEnabled(false)
 
 	output := termenv.NewOutput(os.Stdout)
-	m := model{list: l, output: output}
-
-	return m
+	return ListMethodsModel{list: l, output: output}
 }
 
-type model struct {
+type ListMethodsModel struct {
 	list     list.Model
 	quitting bool
 	output   *termenv.Output
 }
 
-func (m model) Init() tea.Cmd {
+func (m ListMethodsModel) Init() tea.Cmd {
 	return tea.SetWindowTitle("Go2FA")
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m ListMethodsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.list.SetWidth(msg.Width)
@@ -126,7 +124,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m ListMethodsModel) View() string {
 	return "\n" + m.list.View()
 }
 

@@ -1,0 +1,68 @@
+package screens
+
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wordwrap"
+	"github.com/muesli/termenv"
+)
+
+type createVaultModel struct {
+	width int
+	height int
+}
+
+func (m createVaultModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m createVaultModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+				case "esc":
+					output := termenv.NewOutput(os.Stdout)
+					output.ClearScreen()
+
+					return m, tea.Quit
+			}
+
+			switch msg.Type {
+				case tea.KeyEnter:
+					screen_y := ListMethodsScreen()
+					return RootScreen().SwitchScreen(&screen_y)
+			}
+
+		case tea.WindowSizeMsg:
+			m.width = msg.Width
+			m.height = msg.Height
+
+			break
+	}
+
+
+	return m, nil
+}
+
+func (m createVaultModel) View() string {
+	var b strings.Builder
+	var header = lipgloss.NewStyle().Padding(1, 2)
+
+	text := header.Render(fmt.Sprintf("Ваши ключи шифруются с помощью ассиметричного шифрования. Создаем хранилище?"))
+
+	b.WriteString(wordwrap.String(text, m.width))
+
+	fmt.Fprintf(&b, "\n\n")
+	fmt.Fprintf(&b, "%s\n", help.Render("To confirm - [Enter]\nTo cancel - [Esc]"))
+
+	return b.String()
+}
+
+func CreateVaultScreen() createVaultModel {
+	return createVaultModel{}
+}
+
