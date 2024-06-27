@@ -83,12 +83,31 @@ func backupVault() bool {
 
 }
 
+func GetEmptyVault() vault {
+	return vault{}
+}
+
 func GetDataVault() vault {
 	vault := toData()
 	db, _ := base64.StdEncoding.DecodeString(vault.Db)
+	if len(db) != 0 {
+		db = Decrypt(GetPrivateKey(), db)
+	}
 	vault.Db = string(db)
 
 	return vault
+}
+
+func SetEmptyVault(vault vault) bool {
+	homeDir := os.Getenv("HOME")
+	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "stores", "vault.json")
+
+	vault.Db = ""
+	vault.Iterator = vault.Iterator + 1
+	data, _ := json.Marshal(vault)
+
+	os.WriteFile(filePath, data, 0644)
+	return true
 }
 
 func SetDataVault(vault vault) bool {
@@ -96,8 +115,9 @@ func SetDataVault(vault vault) bool {
 	homeDir := os.Getenv("HOME")
 	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "stores", "vault.json")
 
-	db := base64.StdEncoding.EncodeToString([]byte(vault.Db))
-	vault.Db = string(db)
+	db := string(Encrypt(GetPublicKey(), []byte(vault.Db)))
+	db = base64.StdEncoding.EncodeToString([]byte(db))
+	vault.Db = db
 	vault.Iterator = vault.Iterator + 1
 	data, _ := json.Marshal(vault)
 

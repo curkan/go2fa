@@ -15,6 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/term"
 )
 
@@ -116,35 +117,36 @@ func (m listKeysModel) Init() tea.Cmd {
 }
 
 func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.list.FilterState() == list.Filtering {
+	}
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
 		output := termenv.NewOutput(os.Stdout)
 
-		switch msg.String() {
-			case "q", "ctrl+c":
-				output.ClearScreen()
+		if m.list.FilterState() != list.Filtering {
+			switch msg.String() {
+				case "q", "ctrl+c":
+					output.ClearScreen()
 
-				return m, tea.Quit
-			case "d": 
-				item, ok := m.list.SelectedItem().(itemKey)
+					return m, tea.Quit
+				case "d": 
+					item, ok := m.list.SelectedItem().(itemKey)
 
-				if !ok {
-					return m, tick()
+					if !ok {
+						return m, tick()
+					}
+
+					twoFactorItem := structure.TwoFactorItem{
+						Title: item.title,
+						Desc: item.desc,
+						Secret: item.secret,
+					}
+
+					screen := ScreenDeleteKey(m.itemsKeysList, twoFactorItem)
+					return RootScreen().SwitchScreen(&screen)
 				}
-
-				twoFactorItem := structure.TwoFactorItem{
-					Title: item.title,
-					Desc: item.desc,
-					Secret: item.secret,
-				}
-
-				//TODO: Сделать удаление, сравнивать текущий срез с другими, и если найден такой, то удаляем
-				//Сделать бекап при изменении структуры
-
-				screen := ScreenDeleteKey(m.itemsKeysList, twoFactorItem)
-				return RootScreen().SwitchScreen(&screen)
-			}
+		}
 
 		switch msg.Type {
 			case tea.KeyCtrlC:
@@ -156,15 +158,17 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return RootScreen().SwitchScreen(&screen)
 
 			case tea.KeyEnter:
-				item, ok := m.list.SelectedItem().(itemKey)
+				if m.list.FilterState() != list.Filtering {
+					item, ok := m.list.SelectedItem().(itemKey)
 
-				if !ok {
-					return m, tick()
+					if !ok {
+						return m, tick()
+					}
+
+					code, _ := twofactor.GenerateTOTP(item.secret)
+					clipboard.WriteAll(code)
+					globalCopied = true
 				}
-
-				code, _ := twofactor.GenerateTOTP(item.secret)
-				clipboard.WriteAll(code)
-				globalCopied = true
 			default:
 				globalCopied = false
 		}
@@ -189,9 +193,11 @@ func ListKeysScreen() listKeysModel {
 	var itemKeysList []structure.TwoFactorItem
 	vault := crypto.GetDataVault()
 
-	err := json.Unmarshal([]byte(vault.Db), &itemKeysList)
-	if err != nil {
-		fmt.Println(err)
+	if len(vault.Db) > 0 {
+		err := json.Unmarshal([]byte(vault.Db), &itemKeysList)
+		if err != nil {
+			logrus.Fatal(err)
+		}
 	}
 
 	var itemKeys []list.Item

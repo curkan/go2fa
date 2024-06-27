@@ -24,7 +24,7 @@ var (
 
 func ScreenDeleteKey(itemsKeysList []structure.TwoFactorItem, TwoFactorItem structure.TwoFactorItem) deleteKeyScreen {
 	return deleteKeyScreen{
-		TwoFactorItem:TwoFactorItem,
+		TwoFactorItem: TwoFactorItem,
 		itemKeysList: itemsKeysList,
 	}
 }
@@ -34,7 +34,6 @@ func (m deleteKeyScreen) Init() tea.Cmd {
 }
 
 func (m deleteKeyScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
