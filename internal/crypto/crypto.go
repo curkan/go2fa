@@ -1,81 +1,101 @@
 package crypto
 
 import (
-    "crypto/aes"
-    "crypto/cipher"
-    "crypto/rand"
-
-    "golang.org/x/crypto/scrypt"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"os"
+	"path/filepath"
 )
 
-func Encrypt(key, data []byte) ([]byte, error) {
-    key, salt, err := DeriveKey(key, nil)
+func GetPublicKey() []byte {
+	homeDir := os.Getenv("HOME")
+	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "keys", "public.pem")
+
+    publicKeyPEM, err := os.ReadFile(filePath)
     if err != nil {
-        return nil, err
+        panic(err)
     }
 
-    blockCipher, err := aes.NewCipher(key)
-    if err != nil {
-        return nil, err
-    }
-
-    gcm, err := cipher.NewGCM(blockCipher)
-    if err != nil {
-        return nil, err
-    }
-
-    nonce := make([]byte, gcm.NonceSize())
-    if _, err = rand.Read(nonce); err != nil {
-        return nil, err
-    }
-
-    ciphertext := gcm.Seal(nonce, nonce, data, nil)
-
-    ciphertext = append(ciphertext, salt...)
-
-    return ciphertext, nil
+	return publicKeyPEM
 }
 
-func Decrypt(key, data []byte) ([]byte, error) {
-    salt, data := data[len(data)-32:], data[:len(data)-32]
+func GetPrivateKey() []byte {
+	homeDir := os.Getenv("HOME")
+	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "keys", "private.pem")
 
-    key, _, err := DeriveKey(key, salt)
+    privateKey, err := os.ReadFile(filePath)
     if err != nil {
-        return nil, err
+        panic(err)
     }
 
-    blockCipher, err := aes.NewCipher(key)
-    if err != nil {
-        return nil, err
-    }
-
-    gcm, err := cipher.NewGCM(blockCipher)
-    if err != nil {
-        return nil, err
-    }
-
-    nonce, ciphertext := data[:gcm.NonceSize()], data[gcm.NonceSize():]
-
-    plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-    if err != nil {
-        return nil, err
-    }
-
-    return plaintext, nil
+	return privateKey
 }
 
-func DeriveKey(password, salt []byte) ([]byte, []byte, error) {
-    if salt == nil {
-        salt = make([]byte, 32)
-        if _, err := rand.Read(salt); err != nil {
-            return nil, nil, err
-        }
-    }
+func GeneratePublicPrivateKeys() {
+	homeDir := os.Getenv("HOME")
+	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "keys")
+	err := os.MkdirAll(filePath, os.ModePerm)
 
-    key, err := scrypt.Key(password, salt, 8192, 8, 1, 32)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
     if err != nil {
-        return nil, nil, err
+        panic(err)
     }
 
-    return key, salt, nil
+    publicKey := &privateKey.PublicKey
+
+    privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+    privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+        Type:  "RSA PRIVATE KEY",
+        Bytes: privateKeyBytes,
+    })
+    err = os.WriteFile(filepath.Join(filePath, "private.pem"), privateKeyPEM, 0644)
+    if err != nil {
+        panic(err)
+    }
+
+    publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+    if err != nil {
+        panic(err)
+    }
+    publicKeyPEM := pem.EncodeToMemory(&pem.Block{
+        Type:  "RSA PUBLIC KEY",
+        Bytes: publicKeyBytes,
+    })
+
+    err = os.WriteFile(filepath.Join(filePath, "public.pem"), publicKeyPEM, 0644)
+    if err != nil {
+        panic(err)
+    }
+}
+
+func Encrypt(publicKeyPEM []byte, encryptData []byte) []byte {
+    publicKeyBlock, _ := pem.Decode(publicKeyPEM)
+    publicKey, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
+    if err != nil {
+        panic(err)
+    }
+
+    ciphertext, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey.(*rsa.PublicKey), encryptData)
+    if err != nil {
+        panic(err)
+    }
+
+	return ciphertext
+}
+
+func Decrypt(privateKeyPEM []byte, cipherData []byte) []byte {
+    privateKeyBlock, _ := pem.Decode(privateKeyPEM)
+    privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBlock.Bytes)
+    if err != nil {
+        panic(err)
+    }
+
+    plaintext, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, cipherData)
+    if err != nil {
+        panic(err)
+    }
+
+	return plaintext
 }
