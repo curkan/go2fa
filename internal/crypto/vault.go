@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type vault struct {
@@ -81,6 +83,22 @@ func backupVault() bool {
 
 	return true
 
+}
+
+func CreateDirs() {
+	homeDir := os.Getenv("HOME")
+	filePath := filepath.Join(homeDir, ".local", "share", "go2fa")
+	err := os.MkdirAll(filepath.Join(filePath, "stores"), os.ModePerm)
+
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	err = os.MkdirAll(filepath.Join(filePath, "backups"), os.ModePerm)
+
+	if err != nil {
+		logrus.Fatal(err)
+	}
 }
 
 func GetEmptyVault() vault {
