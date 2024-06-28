@@ -25,7 +25,21 @@ TUI основан на [bubbletea](https://github.com/charmbracelet/bubbletea)
 - **Фильтрация**: Организуйте свои TOTP-коды с помощью пользовательских имен, описание, что позволяет легко найти и получить доступ к кодам, которые вам нужны.
 - **Легковесность**: Хранилище TOTP - это терминальное приложение, требующее минимальных системных ресурсов и не имеющее зависимостей, написанное на Go.
 
-## Быстрый старт
+## Установка
+
+### [Homebrew](https://brew.sh) (Linux/MacOS)
+
+```shell
+brew install curkan/public/go2fa
+```
+
+### Из исходника
+
+```shell
+go install github.com/curkan/go2fa@latest
+```
+
+### Ручная установка
 
 Скачайте [последний релиз](https://github.com/curkan/go2fa/releases/latest) и добавьте бинарник в ваш PATH.
 
