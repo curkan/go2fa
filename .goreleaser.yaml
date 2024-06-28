@@ -14,7 +14,7 @@ before:
     - go mod tidy
 
 brews:
-- name: gophersay
+- name: go2fa
   homepage: https://github.com/curkan/homebrew-public 
   tap:
     owner: curkan
