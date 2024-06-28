@@ -16,7 +16,7 @@ before:
 brews:
 - name: go2fa
   homepage: https://github.com/curkan/homebrew-public 
-  tap:
+  repository:
     owner: curkan
     name: homebrew-public
 
