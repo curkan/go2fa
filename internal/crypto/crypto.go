@@ -70,32 +70,64 @@ func GeneratePublicPrivateKeys() {
     }
 }
 
-func Encrypt(publicKeyPEM []byte, encryptData []byte) []byte {
+func Encrypt(publicKeyPEM []byte, encryptData []byte) ([]byte) {
     publicKeyBlock, _ := pem.Decode(publicKeyPEM)
     publicKey, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
     if err != nil {
         panic(err)
     }
 
-    ciphertext, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey.(*rsa.PublicKey), encryptData)
-    if err != nil {
-        panic(err)
+    rsaPublicKey := publicKey.(*rsa.PublicKey)
+    chunkSize := rsaPublicKey.Size() - 11 // 11 is the overhead for PKCS#1 v1.5 padding
+
+    var ciphertext []byte
+    for len(encryptData) > 0 {
+        chunk := encryptData
+        if len(chunk) > chunkSize {
+            chunk = encryptData[:chunkSize]
+            encryptData = encryptData[chunkSize:]
+        } else {
+            encryptData = nil
+        }
+
+        encryptedChunk, err := rsa.EncryptPKCS1v15(rand.Reader, rsaPublicKey, chunk)
+        if err != nil {
+			panic(err)
+        }
+
+        ciphertext = append(ciphertext, encryptedChunk...)
     }
 
-	return ciphertext
+    return ciphertext
 }
 
-func Decrypt(privateKeyPEM []byte, cipherData []byte) []byte {
+func Decrypt(privateKeyPEM []byte, cipherData []byte) ([]byte) {
     privateKeyBlock, _ := pem.Decode(privateKeyPEM)
     privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBlock.Bytes)
     if err != nil {
-        panic(err)
+		panic(err)
     }
 
-    plaintext, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, cipherData)
-    if err != nil {
-        panic(err)
+    rsaPrivateKey := privateKey
+    chunkSize := rsaPrivateKey.Size()
+
+    var plaintext []byte
+    for len(cipherData) > 0 {
+        chunk := cipherData
+        if len(chunk) > chunkSize {
+            chunk = cipherData[:chunkSize]
+            cipherData = cipherData[chunkSize:]
+        } else {
+            cipherData = nil
+        }
+
+        decryptedChunk, err := rsa.DecryptPKCS1v15(rand.Reader, rsaPrivateKey, chunk)
+        if err != nil {
+			panic(err)
+        }
+
+        plaintext = append(plaintext, decryptedChunk...)
     }
 
-	return plaintext
+    return plaintext
 }
