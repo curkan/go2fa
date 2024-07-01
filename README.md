@@ -27,7 +27,9 @@ TUI основан на [bubbletea](https://github.com/charmbracelet/bubbletea)
 
 ## Установка
 
+
 ### [Homebrew](https://brew.sh) (Linux/MacOS)
+> Убедитесь, что стоит **Xclip** или **Xsel**. Иначе не будет работать копирование. 
 
 ```shell
 brew install curkan/public/go2fa
