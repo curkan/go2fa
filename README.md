@@ -97,6 +97,35 @@ go2fa
 
 `stores` - хранилища, на текущий момент только vault.json
 
+## Тестирование
+
+- **Запуск всех тестов**: 
+  - `go test ./...`
+  - с покрытием: `go test ./... -cover`
+
+- **Где писать тесты**: 
+  - Рядом с кодом, в файлах вида `*_test.go` внутри соответствующих пакетов, например: `internal/crypto/crypto_test.go`, `internal/addkey/addkey_test.go`, `internal/deletekey/deletekey_test.go`, `internal/twofactor/generate_test.go`.
+
+- **Изоляция от реальной среды**:
+  - Для тестов используется in-memory файловая система через `afero`. Это исключает любые изменения в реальном `$HOME/.local/share/go2fa`.
+  - Базовый шаблон для тестов:
+
+```go
+import (
+    "testing"
+    "go2fa/internal/crypto"
+    "github.com/spf13/afero"
+)
+
+func TestSomething(t *testing.T) {
+    crypto.FS = afero.NewMemMapFs()   // изолированный FS
+    t.Setenv("HOME", "/home/test")  // детерминированные пути
+    crypto.CreateDirs()
+    crypto.GeneratePublicPrivateKeys()
+    // ... тестовая логика ...
+}
+```
+
 ## TODO:
 - Добавить синхронизацию в Git репозиторием
 - Добавить короткие команды, для быстрого получения в clipboard нужного TOTP

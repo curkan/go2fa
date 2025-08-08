@@ -1,19 +1,24 @@
 package crypto
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"os"
-	"path/filepath"
+    "crypto/rand"
+    "crypto/rsa"
+    "crypto/x509"
+    "encoding/pem"
+    "os"
+    "path/filepath"
+
+    "github.com/spf13/afero"
 )
+
+// FS abstracts filesystem access to allow tests to run against in-memory storage.
+var FS afero.Fs = afero.NewOsFs()
 
 func GetPublicKey() []byte {
 	homeDir := os.Getenv("HOME")
 	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "keys", "public.pem")
 
-    publicKeyPEM, err := os.ReadFile(filePath)
+    publicKeyPEM, err := afero.ReadFile(FS, filePath)
     if err != nil {
         panic(err)
     }
@@ -25,7 +30,7 @@ func GetPrivateKey() []byte {
 	homeDir := os.Getenv("HOME")
 	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "keys", "private.pem")
 
-    privateKey, err := os.ReadFile(filePath)
+    privateKey, err := afero.ReadFile(FS, filePath)
     if err != nil {
         panic(err)
     }
@@ -36,7 +41,7 @@ func GetPrivateKey() []byte {
 func GeneratePublicPrivateKeys() {
 	homeDir := os.Getenv("HOME")
 	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "keys")
-	err := os.MkdirAll(filePath, os.ModePerm)
+    err := FS.MkdirAll(filePath, os.ModePerm)
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
     if err != nil {
@@ -50,7 +55,7 @@ func GeneratePublicPrivateKeys() {
         Type:  "RSA PRIVATE KEY",
         Bytes: privateKeyBytes,
     })
-    err = os.WriteFile(filepath.Join(filePath, "private.pem"), privateKeyPEM, 0644)
+    err = afero.WriteFile(FS, filepath.Join(filePath, "private.pem"), privateKeyPEM, 0644)
     if err != nil {
         panic(err)
     }
@@ -64,7 +69,7 @@ func GeneratePublicPrivateKeys() {
         Bytes: publicKeyBytes,
     })
 
-    err = os.WriteFile(filepath.Join(filePath, "public.pem"), publicKeyPEM, 0644)
+    err = afero.WriteFile(FS, filepath.Join(filePath, "public.pem"), publicKeyPEM, 0644)
     if err != nil {
         panic(err)
     }

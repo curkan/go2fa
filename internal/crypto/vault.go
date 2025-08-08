@@ -4,13 +4,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
-	"os"
+    "os"
 	"path/filepath"
 	"time"
 
 	"github.com/sirupsen/logrus"
+    "github.com/spf13/afero"
 )
 
 type vault struct {
@@ -21,26 +20,18 @@ type vault struct {
 func toData() vault {
 	homeDir := os.Getenv("HOME")
 	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "stores", "vault.json")
-	jsonFile, err := os.Open(filePath)
+    var vault vault
+    jsonData, err := afero.ReadFile(FS, filePath)
 
 	if err != nil {
 		fmt.Println(err)
+        return vault
 	}
 
-	defer jsonFile.Close()
-	var vault vault
-
-	jsonData, err := io.ReadAll(jsonFile)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	err = json.Unmarshal(jsonData, &vault)
-
-	if err != nil {
-		fmt.Println(err)
-	}
+    err = json.Unmarshal(jsonData, &vault)
+    if err != nil {
+        fmt.Println(err)
+    }
 
 	return vault
 }
@@ -53,48 +44,41 @@ func backupVault() bool {
 
 	backupFile := prefix + filepath.Base(filePath) 
 
-	f, err := os.Open(filePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
+    backupsDir := filepath.Join(homeDir, ".local", "share", "go2fa", "backups")
 
-	backupsDir := filepath.Join(homeDir, ".local", "share", "go2fa", "backups")
+    // ensure backups dir exists
+    if err := FS.MkdirAll(backupsDir, 0755); err != nil {
+        fmt.Println(err)
+        return false
+    }
 
-	// создаем директорию для бэкапов, если она не существует
-	if _, err := os.Stat(backupsDir); os.IsNotExist(err) {
-		err := os.MkdirAll(backupsDir, 0755)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+    // read source vault file
+    data, err := afero.ReadFile(FS, filePath)
+    if err != nil {
+        fmt.Println(err)
+        return false
+    }
 
-	backup, err := os.Create(filepath.Join(backupsDir, backupFile))
+    // write backup content
+    if err := afero.WriteFile(FS, filepath.Join(backupsDir, backupFile), data, 0644); err != nil {
+        fmt.Println(err)
+        return false
+    }
 
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer backup.Close()
-
-	_, err = io.Copy(backup, f)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return true
+    return true
 
 }
 
 func CreateDirs() {
 	homeDir := os.Getenv("HOME")
 	filePath := filepath.Join(homeDir, ".local", "share", "go2fa")
-	err := os.MkdirAll(filepath.Join(filePath, "stores"), os.ModePerm)
+    err := FS.MkdirAll(filepath.Join(filePath, "stores"), os.ModePerm)
 
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	err = os.MkdirAll(filepath.Join(filePath, "backups"), os.ModePerm)
+    err = FS.MkdirAll(filepath.Join(filePath, "backups"), os.ModePerm)
 
 	if err != nil {
 		logrus.Fatal(err)
@@ -124,7 +108,7 @@ func SetEmptyVault(vault vault) bool {
 	vault.Iterator = vault.Iterator + 1
 	data, _ := json.Marshal(vault)
 
-	os.WriteFile(filePath, data, 0644)
+    afero.WriteFile(FS, filePath, data, 0644)
 	return true
 }
 
@@ -139,7 +123,7 @@ func SetDataVault(vault vault) bool {
 	vault.Iterator = vault.Iterator + 1
 	data, _ := json.Marshal(vault)
 
-	err := os.WriteFile(filePath, data, 0644)
+    err := afero.WriteFile(FS, filePath, data, 0644)
 	if err != nil {
 		fmt.Println(err)
 		return false

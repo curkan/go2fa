@@ -1,7 +1,8 @@
-package screens
+package backups
 
 import (
 	"fmt"
+    screens "go2fa/internal/screens"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -64,8 +65,8 @@ func (m screenTwoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.index = 0
 			}
 
-			screen_y := ListMethodsScreen()
-            return RootScreen().SwitchScreen(&screen_y)
+            screen_y := screens.ListMethodsScreen()
+            return screens.RootScreen().SwitchScreen(&screen_y)
 		default:
 			return m, nil
 		}
