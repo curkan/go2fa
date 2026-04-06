@@ -1,11 +1,13 @@
 <p align="center">
     <img src="docs/logo.png" width="250" alt="go2fa totp manager" />
-    <h5 align="center">Храните и используйте свои TOTP ключи в терминале</h5>
+    <h5 align="center">Store and use your TOTP keys right in the terminal</h5>
 </p>
+
+> English | [Русский](README_RU.md)
 
 ---
 
-Мне надоело постоянно использовать Google Authentificator и переключаться между ПК и телефоном для подтверждения двухфакторной аутентификации. Поэтому я сделал эту TUI, которая позволит хранить, управлять, просматривать, копировать 2FA ключ в пару нажатий.
+I got tired of constantly using Google Authenticator and switching between my PC and phone to confirm two-factor authentication. So I built this TUI that lets you store, manage, view, and copy 2FA codes in just a couple of keystrokes.
 
 <p align="center">
   <img src="docs/present.gif" alt="animated" />
@@ -13,54 +15,54 @@
 
 ---
 
-# Описание
+# Description
 
-Go2FA TOTP - это легковесное, терминальное приложение, предназначенное для безопасного хранения и управления вашими ключами Time-Based One-Time Password (TOTP). 
+Go2FA TOTP is a lightweight terminal application designed for secure storage and management of your Time-Based One-Time Password (TOTP) keys.
 
-TUI основан на [bubbletea](https://github.com/charmbracelet/bubbletea)
+The TUI is built on [bubbletea](https://github.com/charmbracelet/bubbletea)
 
-## Функции
-- **Безопасное хранение**: Хранилище TOTP хранит ваши секретные в зашифрованном виде, гарантируя безопасность вашей чувствительной информации.
-- **Быстрый доступ**: Легко копируйте коды TOTP с помощью одной команды, устраняя необходимость ручного ввода кодов или переключения между приложениями.
-- **Фильтрация**: Организуйте свои TOTP-коды с помощью пользовательских имен, описание, что позволяет легко найти и получить доступ к кодам, которые вам нужны.
-- **Легковесность**: Хранилище TOTP - это терминальное приложение, требующее минимальных системных ресурсов и не имеющее зависимостей, написанное на Go.
+## Features
+- **Secure Storage**: The TOTP vault stores your secrets in encrypted form, ensuring the safety of your sensitive information.
+- **Quick Access**: Easily copy TOTP codes with a single command, eliminating the need for manual code entry or switching between apps.
+- **Filtering**: Organize your TOTP codes using custom names and descriptions, making it easy to find and access the codes you need.
+- **Lightweight**: The TOTP vault is a terminal application that requires minimal system resources and has no dependencies, written in Go.
 
-## Установка
+## Installation
 
 
 ### [Homebrew](https://brew.sh) (Linux/MacOS)
-> Убедитесь, что стоит **Xclip** или **Xsel**. Иначе не будет работать копирование. 
+> Make sure **Xclip** or **Xsel** is installed. Otherwise, copying to clipboard will not work.
 
 ```shell
 brew install curkan/public/go2fa
 ```
 
-### Из исходника
+### From Source
 
 ```shell
 go install github.com/curkan/go2fa@latest
 ```
 
-### Ручная установка
+### Manual Installation
 
-Скачайте [последний релиз](https://github.com/curkan/go2fa/releases/latest) и добавьте бинарник в ваш PATH.
+Download the [latest release](https://github.com/curkan/go2fa/releases/latest) and add the binary to your PATH.
 
-Запустите с помощью команды `go2fa`
+Run with the command `go2fa`
 
-### Просмотр ключей
-На экране просмотра ключей вы можете фильтровать, удалять и копировать нужный TOTP ключ.
+### Viewing Keys
+On the key viewing screen, you can filter, delete, and copy the desired TOTP key.
 
-- `d` - вызвать удаление (Enter - подтвердить, Esc - вернуться назад)
-- `enter` - скопировать в буфер обмена. При копировании левая граница становится толще.
-- `/` - фильтрация по имени
+- `d` - trigger deletion (Enter - confirm, Esc - go back)
+- `enter` - copy to clipboard. When copied, the left border becomes thicker.
+- `/` - filter by name
 
-### Добавление ключей
-Чтобы добавить новый ключ, введите **Имя** и **SecretKey**, Описание по желанию.\
-SecretKey формата base32 иначе отобьет ошибку.
+### Adding Keys
+To add a new key, enter the **Name** and **SecretKey**; Description is optional.\
+SecretKey must be in base32 format, otherwise an error will be returned.
 
 ## Vault
-Используется хранилище в формате JSON для дополнительной информации `vault.json`\
-При первом запуске приложение создаст *publicKey* и *privateKey* для шифрования вашего Vault.
+A JSON-based vault is used for storing additional information in `vault.json`.\
+On the first launch, the application will create a *publicKey* and *privateKey* to encrypt your Vault.
 
 ```json
 {
@@ -68,16 +70,16 @@ SecretKey формата base32 иначе отобьет ошибку.
   "db": "CtSRXlMkbXrMmLh/IeMiJCzRbzJkTMagWGVwnvaOkqroDUViVJaBaMbih258o..."
 }
 ```
-`db` - зашифрованное поле, к котором хранится структура name, description, secretKey\
-`iterator` - дополнительное поле, которое инкрементируется при каждом изменении хранилища. По iterator можно быстро понять, какая версия была предыдущая и восстановить его из бекапа.
+`db` - an encrypted field that stores the structure of name, description, secretKey\
+`iterator` - an additional field that increments with each vault modification. The iterator allows you to quickly identify the previous version and restore it from a backup.
 
-JSON структура с открытым форматом была выбрана для удобного расширения приложения. Не все дополнительные поля должны быть зашифрованы.
+The open JSON format was chosen for convenient application extension. Not all additional fields need to be encrypted.
 
 
-## Структура файлов
-Все используемые файлы хранятся в пути: `$HOME/.local/share/go2fa`
+## File Structure
+All used files are stored at: `$HOME/.local/share/go2fa`
 
-```sheel
+```shell
 go2fa
 ├── backups
 ├── keys
@@ -85,30 +87,30 @@ go2fa
 ```
 
 
-`backups` - при добавлении/удалении ключей создаются бекапы с временем, когда произошло изменение. Это позволит вам восстановить нужную версию. Файлы бекапов шифрвуются, как и основной файл `vault.json`
+`backups` - when adding/deleting keys, backups are created with the timestamp of the change. This allows you to restore the desired version. Backup files are encrypted, just like the main `vault.json` file.
 
-`keys` - хранятся privateKey и publicKey
+`keys` - stores privateKey and publicKey
 
-```sheel
+```shell
 └── keys
-    ├── private.pem
-    └── public.pem
+    ├── private.pem
+    └── public.pem
 ```
 
-`stores` - хранилища, на текущий момент только vault.json
+`stores` - vaults, currently only vault.json
 
-## Тестирование
+## Testing
 
-- **Запуск всех тестов**: 
+- **Run all tests**:
   - `go test ./...`
-  - с покрытием: `go test ./... -cover`
+  - with coverage: `go test ./... -cover`
 
-- **Где писать тесты**: 
-  - Рядом с кодом, в файлах вида `*_test.go` внутри соответствующих пакетов, например: `internal/crypto/crypto_test.go`, `internal/addkey/addkey_test.go`, `internal/deletekey/deletekey_test.go`, `internal/twofactor/generate_test.go`.
+- **Where to write tests**:
+  - Next to the code, in `*_test.go` files within the corresponding packages, for example: `internal/crypto/crypto_test.go`, `internal/addkey/addkey_test.go`, `internal/deletekey/deletekey_test.go`, `internal/twofactor/generate_test.go`.
 
-- **Изоляция от реальной среды**:
-  - Для тестов используется in-memory файловая система через `afero`. Это исключает любые изменения в реальном `$HOME/.local/share/go2fa`.
-  - Базовый шаблон для тестов:
+- **Isolation from the real environment**:
+  - Tests use an in-memory filesystem via `afero`. This prevents any changes to the real `$HOME/.local/share/go2fa`.
+  - Basic test template:
 
 ```go
 import (
@@ -118,20 +120,20 @@ import (
 )
 
 func TestSomething(t *testing.T) {
-    crypto.FS = afero.NewMemMapFs()   // изолированный FS
-    t.Setenv("HOME", "/home/test")  // детерминированные пути
+    crypto.FS = afero.NewMemMapFs()   // isolated FS
+    t.Setenv("HOME", "/home/test")  // deterministic paths
     crypto.CreateDirs()
     crypto.GeneratePublicPrivateKeys()
-    // ... тестовая логика ...
+    // ... test logic ...
 }
 ```
 
 ## TODO:
-- Добавить синхронизацию в Git репозиторием
-- Добавить короткие команды, для быстрого получения в clipboard нужного TOTP
-- Экран восстановления из бекапа
+- Add synchronization with a Git repository
+- Add short commands for quickly copying the desired TOTP to clipboard
+- Backup restoration screen
 
 
-## Авторское право и лицензия
+## Copyright and License
 
-GO2FA лицензирован в соответствии с условиями лицензии MIT. Полный текст лицензии можно найти в файле [`LICENSE`](https://github.com/curkan/go2fa/blob/master/LICENSE).
+GO2FA is licensed under the terms of the MIT License. The full license text can be found in the [`LICENSE`](https://github.com/curkan/go2fa/blob/master/LICENSE) file.
