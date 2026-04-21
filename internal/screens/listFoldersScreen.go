@@ -5,6 +5,7 @@ import (
 	"go2fa/internal/storage"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -17,6 +18,7 @@ import (
 // Custom bindings surfaced through the list's built-in help bar.
 var (
 	folderKeyOpen      = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "open"))
+	folderKeyPick      = key.NewBinding(key.WithKeys("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"), key.WithHelp("0-9", "pick"))
 	folderKeyAddKey    = key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "add key"))
 	folderKeyNewFolder = key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new folder"))
 	folderKeyRename    = key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "rename"))
@@ -45,7 +47,12 @@ func (d folderItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 		return
 	}
 
-	line := fmt.Sprintf("%s (%d)", f.name, f.count)
+	// Slot label self-documents the 0-9 quick-pick binding.
+	slot := ""
+	if index <= 9 {
+		slot = fmt.Sprintf("[%d] ", index)
+	}
+	line := fmt.Sprintf("%s%s (%d)", slot, f.name, f.count)
 	if index == m.Index() {
 		fmt.Fprint(w, selectedItemStyle.Render("→ "+line))
 		return
@@ -55,7 +62,7 @@ func (d folderItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 
 var folderHelp = lipgloss.NewStyle().Padding(0, 2).Foreground(lipgloss.Color("#D2D2D2"))
 
-var folderShortHelp = []key.Binding{folderKeyOpen, folderKeyAddKey, folderKeyNewFolder, folderKeyRename, folderKeyDelete, folderKeyBack}
+var folderShortHelp = []key.Binding{folderKeyOpen, folderKeyPick, folderKeyAddKey, folderKeyNewFolder, folderKeyRename, folderKeyDelete, folderKeyBack}
 
 type listFoldersModel struct {
 	list list.Model
@@ -72,6 +79,18 @@ func (m listFoldersModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			output.ClearScreen()
 			return m, tea.Quit
+		case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+			n, _ := strconv.Atoi(msg.String())
+			items := m.list.Items()
+			if n >= len(items) {
+				return m, nil
+			}
+			f, ok := items[n].(folderItem)
+			if !ok {
+				return m, nil
+			}
+			screen := ListKeysScreenScoped(f.id, f.name)
+			return RootScreen().SwitchScreen(&screen)
 		case "a":
 			f, _ := m.list.SelectedItem().(folderItem)
 			// For the synthetic "All keys" row f.id == "" → Default will be preselected.

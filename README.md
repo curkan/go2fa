@@ -50,26 +50,33 @@ Download the [latest release](https://github.com/curkan/go2fa/releases/latest) a
 Run with the command `go2fa`
 
 ### Viewing Keys
-On the key viewing screen, you can filter, add, edit, delete, move, and copy the desired TOTP key.
+On the key viewing screen, you can filter, add, edit, delete, move, reorder, and copy the desired TOTP key.
 
+- `1`…`9` - quick-pick and copy the Nth key in the current view (slot `0` = 10th, like tab/weapon shortcuts)
 - `a` - add a new key (the current folder is preselected in the picker)
 - `e` - edit the selected key (title/description)
 - `d` - trigger deletion (Enter - confirm, Esc - go back)
 - `m` - move the selected key to another folder
+- `shift+↑` / `shift+↓` or `K` / `J` - reorder the selected key within the current folder (persists in the vault)
 - `enter` - copy to clipboard. When copied, the left border becomes thicker.
 - `/` - filter by name
+
+Each row is prefixed with its slot label (`[1]`, `[2]`, …, `[0]` for the 10th).
 
 ### Folders
 Keys can be organized into folders (Work / Home / Personal / …). The folders list is the landing screen; on top you'll see a synthetic **All keys** entry that behaves like the old unscoped list.
 
 Inside the folders screen:
 
+- `0`…`9` - quick-open the folder at slot N (slot `0` is always **All keys**)
 - `a` - add a new key (the highlighted folder — or Default on *All keys* — is preselected)
 - `n` - create a new folder
 - `e` - rename the highlighted folder
 - `d` - delete the highlighted folder (its keys are moved to **Default**; the `Default` folder itself cannot be deleted)
 - `Enter` - open the folder
 - `Esc` / `q` - quit
+
+Each row is prefixed with its slot label (`[0]` for All keys, `[1]`, `[2]`, …).
 
 ### Adding Keys
 To add a new key, enter the **Name** and **SecretKey**; Description is optional.\

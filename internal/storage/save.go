@@ -176,6 +176,51 @@ func UpdateItemMeta(s *Store, match func(structure.TwoFactorItem) bool, title, d
 	return false
 }
 
+// ReorderItem moves the first item matched by `match` one step up (direction
+// == -1) or down (direction == +1) within the scope of `scopeFolderID`. When
+// scopeFolderID is empty the whole items slice is treated as one list (used
+// from the synthetic "All keys" view). Returns true if a swap happened; false
+// on no-op (already at the edge of its scope, not found, or invalid direction).
+func ReorderItem(s *Store, match func(structure.TwoFactorItem) bool, direction int, scopeFolderID string) bool {
+	if direction != -1 && direction != 1 {
+		return false
+	}
+	idx := -1
+	for i, it := range s.Items {
+		if match(it) {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		return false
+	}
+	inScope := func(i int) bool {
+		return scopeFolderID == "" || s.Items[i].FolderID == scopeFolderID
+	}
+	target := -1
+	if direction == -1 {
+		for j := idx - 1; j >= 0; j-- {
+			if inScope(j) {
+				target = j
+				break
+			}
+		}
+	} else {
+		for j := idx + 1; j < len(s.Items); j++ {
+			if inScope(j) {
+				target = j
+				break
+			}
+		}
+	}
+	if target == -1 {
+		return false
+	}
+	s.Items[idx], s.Items[target] = s.Items[target], s.Items[idx]
+	return true
+}
+
 // MoveItem reassigns item at index to folderID. The target folder must exist.
 func MoveItem(s *Store, index int, folderID string) error {
 	if index < 0 || index >= len(s.Items) {

@@ -7,6 +7,7 @@ import (
 	"go2fa/internal/twofactor"
 	"io"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -21,15 +22,17 @@ import (
 
 // Custom key bindings surfaced through the list's built-in help bar.
 var (
-	keysKeyCopy   = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "copy"))
-	keysKeyAdd    = key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "add"))
-	keysKeyEdit   = key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit"))
-	keysKeyDelete = key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete"))
-	keysKeyMove   = key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "move"))
-	keysKeyBack   = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back"))
+	keysKeyCopy    = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "copy"))
+	keysKeyPick    = key.NewBinding(key.WithKeys("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"), key.WithHelp("0-9", "pick"))
+	keysKeyAdd     = key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "add"))
+	keysKeyEdit    = key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit"))
+	keysKeyDelete  = key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete"))
+	keysKeyMove    = key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "move"))
+	keysKeyReorder = key.NewBinding(key.WithKeys("shift+up", "shift+down", "K", "J"), key.WithHelp("shift+↑/↓ · J/K", "reorder"))
+	keysKeyBack    = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back"))
 )
 
-var keysShortHelp = []key.Binding{keysKeyCopy, keysKeyAdd, keysKeyEdit, keysKeyDelete, keysKeyMove, keysKeyBack}
+var keysShortHelp = []key.Binding{keysKeyCopy, keysKeyPick, keysKeyAdd, keysKeyEdit, keysKeyDelete, keysKeyMove, keysKeyReorder, keysKeyBack}
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
@@ -67,6 +70,15 @@ func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		code, exp = twofactor.GenerateTOTP(secret)
 	} else {
 		return
+	}
+
+	// Slot label self-documents the 0-9 quick-pick binding.
+	// Slots 1-9 hold the first nine items, slot 0 wraps around to the 10th.
+	switch {
+	case index < 9:
+		title = fmt.Sprintf("[%d] %s", index+1, title)
+	case index == 9:
+		title = "[0] " + title
 	}
 
 	// Conditions
@@ -192,6 +204,30 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					// to a folder you're already viewing is a single keystroke.
 					screen := ScreenInputSecret(m.folderID, m.folderID, m.folderName, false)
 					return RootScreen().SwitchScreen(&screen)
+				case "shift+up", "K":
+					return m.reorderSelected(-1)
+				case "shift+down", "J":
+					return m.reorderSelected(1)
+				case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+					n, _ := strconv.Atoi(msg.String())
+					// "0" wraps around to the 10th visible item; "1".."9" map 1:1.
+					visible := n - 1
+					if n == 0 {
+						visible = 9
+					}
+					items := m.list.VisibleItems()
+					if visible < 0 || visible >= len(items) {
+						return m, tick()
+					}
+					item, ok := items[visible].(itemKey)
+					if !ok {
+						return m, tick()
+					}
+					m.list.Select(visible)
+					code, _ := twofactor.GenerateTOTP(item.secret)
+					clipboard.WriteAll(code)
+					globalCopied = true
+					return m, tick()
 				}
 		}
 
@@ -234,6 +270,54 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m listKeysModel) View() string {
 	return docStyle.Render(m.list.View())
+}
+
+// reorderSelected swaps the currently selected item with its neighbour
+// (direction -1 = up, +1 = down) within the current folder scope, persists
+// the new order, and keeps the cursor on the moved item.
+func (m listKeysModel) reorderSelected(direction int) (tea.Model, tea.Cmd) {
+	item, ok := m.list.SelectedItem().(itemKey)
+	if !ok {
+		return m, nil
+	}
+
+	store, err := storage.LoadStore()
+	if err != nil {
+		return m, nil
+	}
+
+	matcher := func(it structure.TwoFactorItem) bool {
+		return it.Title == item.title && it.Desc == item.desc &&
+			it.Secret == item.secret && it.FolderID == item.folderID
+	}
+	if !storage.ReorderItem(&store, matcher, direction, m.folderID) {
+		return m, nil
+	}
+	if err := storage.SaveStore(store); err != nil {
+		return m, nil
+	}
+
+	scoped := storage.ItemsInFolder(store, m.folderID)
+	listItems := make([]list.Item, 0, len(scoped))
+	for _, it := range scoped {
+		listItems = append(listItems, itemKey{
+			title:    it.Title,
+			desc:     it.Desc,
+			secret:   it.Secret,
+			folderID: it.FolderID,
+		})
+	}
+	m.itemsKeysList = scoped
+	newIdx := m.list.Index() + direction
+	if newIdx < 0 {
+		newIdx = 0
+	}
+	if newIdx >= len(listItems) {
+		newIdx = len(listItems) - 1
+	}
+	m.list.SetItems(listItems)
+	m.list.Select(newIdx)
+	return m, nil
 }
 
 // ListKeysScreen opens the unscoped (all keys) view. Kept for compatibility.

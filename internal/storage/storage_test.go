@@ -243,3 +243,66 @@ func TestV1ItemJSONCompatibility(t *testing.T) {
 		t.Errorf("absent folder_id should default to empty, got %q", it.FolderID)
 	}
 }
+
+func TestReorderItem_ScopedByFolder(t *testing.T) {
+	// Two folders interleaved in the underlying slice. A reorder inside
+	// "work" must not swap with an item from "home" that sits between them.
+	s := Store{
+		Version: StoreVersion,
+		Folders: []Folder{
+			{ID: DefaultFolderID, Name: DefaultFolderName},
+			{ID: "fld_work", Name: "Work"},
+			{ID: "fld_home", Name: "Home"},
+		},
+		Items: []structure.TwoFactorItem{
+			{Title: "w1", Secret: "S1", FolderID: "fld_work"},
+			{Title: "h1", Secret: "S2", FolderID: "fld_home"},
+			{Title: "w2", Secret: "S3", FolderID: "fld_work"},
+		},
+	}
+
+	// Move "w2" up within the "work" scope — should swap with "w1" across "h1".
+	moved := ReorderItem(&s, func(it structure.TwoFactorItem) bool {
+		return it.Title == "w2"
+	}, -1, "fld_work")
+	if !moved {
+		t.Fatal("ReorderItem returned false, expected a swap")
+	}
+	if got := []string{s.Items[0].Title, s.Items[1].Title, s.Items[2].Title}; got[0] != "w2" || got[1] != "h1" || got[2] != "w1" {
+		t.Fatalf("unexpected order after scoped up-move: %v", got)
+	}
+
+	// Move "w2" up again — no neighbour in scope, should be a no-op.
+	if ReorderItem(&s, func(it structure.TwoFactorItem) bool {
+		return it.Title == "w2"
+	}, -1, "fld_work") {
+		t.Fatal("ReorderItem should report false at scope edge")
+	}
+}
+
+func TestReorderItem_GlobalScope(t *testing.T) {
+	// Empty scope => global ordering; ignores folder boundaries.
+	s := Store{
+		Version: StoreVersion,
+		Folders: []Folder{{ID: DefaultFolderID, Name: DefaultFolderName}},
+		Items: []structure.TwoFactorItem{
+			{Title: "a", Secret: "X", FolderID: DefaultFolderID},
+			{Title: "b", Secret: "Y", FolderID: DefaultFolderID},
+			{Title: "c", Secret: "Z", FolderID: DefaultFolderID},
+		},
+	}
+	if !ReorderItem(&s, func(it structure.TwoFactorItem) bool {
+		return it.Title == "a"
+	}, 1, "") {
+		t.Fatal("down-move in global scope should succeed")
+	}
+	if s.Items[0].Title != "b" || s.Items[1].Title != "a" {
+		t.Fatalf("unexpected order: %+v", s.Items)
+	}
+	// Edge: "c" down — no neighbour, no-op.
+	if ReorderItem(&s, func(it structure.TwoFactorItem) bool {
+		return it.Title == "c"
+	}, 1, "") {
+		t.Fatal("down-move at the end should be a no-op")
+	}
+}
