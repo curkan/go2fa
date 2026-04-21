@@ -5,6 +5,11 @@
 
 > [English](README.md) | Русский
 
+<p align="center">
+  <a href="./CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-md-blue" alt="Changelog" /></a>
+  <a href="https://github.com/curkan/go2fa/releases"><img src="https://img.shields.io/github/v/release/curkan/go2fa" alt="Latest release" /></a>
+</p>
+
 ---
 
 Мне надоело постоянно использовать Google Authentificator и переключаться между ПК и телефоном для подтверждения двухфакторной аутентификации. Поэтому я сделал эту TUI, которая позволит хранить, управлять, просматривать, копировать 2FA ключ в пару нажатий.
