@@ -22,13 +22,14 @@ import (
 // Custom key bindings surfaced through the list's built-in help bar.
 var (
 	keysKeyCopy   = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "copy"))
+	keysKeyAdd    = key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "add"))
 	keysKeyEdit   = key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit"))
 	keysKeyDelete = key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete"))
 	keysKeyMove   = key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "move"))
 	keysKeyBack   = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back"))
 )
 
-var keysShortHelp = []key.Binding{keysKeyCopy, keysKeyEdit, keysKeyDelete, keysKeyMove, keysKeyBack}
+var keysShortHelp = []key.Binding{keysKeyCopy, keysKeyAdd, keysKeyEdit, keysKeyDelete, keysKeyMove, keysKeyBack}
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
@@ -186,6 +187,11 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					screen := ScreenEditKey(twoFactorItem, m.folderID, m.folderName)
 					return RootScreen().SwitchScreen(&screen)
+				case "a":
+					// Preselect the current folder (if scoped) so adding a key
+					// to a folder you're already viewing is a single keystroke.
+					screen := ScreenInputSecret(m.folderID, m.folderID, m.folderName, false)
+					return RootScreen().SwitchScreen(&screen)
 				}
 		}
 
@@ -195,11 +201,7 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 
 			case tea.KeyEsc:
-				if m.folderID != "" || m.folderName != "" {
-					screen := ListFoldersScreen()
-					return RootScreen().SwitchScreen(&screen)
-				}
-				screen := ListMethodsScreen()
+				screen := ListFoldersScreen()
 				return RootScreen().SwitchScreen(&screen)
 
 			case tea.KeyEnter:

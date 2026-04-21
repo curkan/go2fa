@@ -6,15 +6,11 @@ type rootScreenModel struct {
     model  tea.Model    // this will hold the current screen model
 }
 
+// RootScreen returns a container used only as a receiver for SwitchScreen.
+// The returned model is always immediately replaced, so we don't pre-load
+// any screen here.
 func RootScreen() rootScreenModel {
-    var rootModel tea.Model
-
-	screen_one := ListMethodsScreen()
-	rootModel = &screen_one
-
-    return rootScreenModel{
-        model: rootModel,
-    }
+    return rootScreenModel{}
 }
 
 func (m rootScreenModel) Init() tea.Cmd {

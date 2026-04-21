@@ -42,18 +42,31 @@ const (
 )
 
 type screenInputSecret struct {
-	focusIndex int
-	textInputs []textinput.Model
-	folders    []storage.Folder
-	folderIdx  int
-	cursorMode cursor.Mode
-	err        error
-	error      string
+	focusIndex       int
+	textInputs       []textinput.Model
+	folders          []storage.Folder
+	folderIdx        int
+	cursorMode       cursor.Mode
+	err              error
+	error            string
+	returnFolderID   string
+	returnFolderName string
+	returnToFolders  bool
 }
 
-func ScreenInputSecret() screenInputSecret {
+// ScreenInputSecret builds the Add key form.
+//
+// preselectFolderID — highlights this folder in the picker; when empty or
+// unknown the Default folder is preselected.
+// returnFolderID / returnFolderName — scope to return to on Esc / after save.
+// returnToFolders — when true, Esc/save returns to the Folders screen instead
+// of a scoped keys list (used when invoked from the Folders landing screen).
+func ScreenInputSecret(preselectFolderID, returnFolderID, returnFolderName string, returnToFolders bool) screenInputSecret {
 	m := screenInputSecret{
-		textInputs: make([]textinput.Model, 3),
+		textInputs:       make([]textinput.Model, 3),
+		returnFolderID:   returnFolderID,
+		returnFolderName: returnFolderName,
+		returnToFolders:  returnToFolders,
 	}
 
 	var t textinput.Model
@@ -87,15 +100,30 @@ func ScreenInputSecret() screenInputSecret {
 	if len(m.folders) == 0 {
 		m.folders = []storage.Folder{{ID: storage.DefaultFolderID, Name: storage.DefaultFolderName}}
 	}
-	// Preselect Default when present.
+	// Preselection: try the requested folder id first, fall back to Default.
+	preselectID := preselectFolderID
+	if preselectID == "" {
+		preselectID = storage.DefaultFolderID
+	}
 	for i, f := range m.folders {
-		if f.ID == storage.DefaultFolderID {
+		if f.ID == preselectID {
 			m.folderIdx = i
 			break
 		}
 	}
 
 	return m
+}
+
+// returnToOrigin produces the tea.Model transition back to the screen that
+// launched this form (either the Folders landing or a scoped keys list).
+func (m screenInputSecret) returnToOrigin() (tea.Model, tea.Cmd) {
+	if m.returnToFolders {
+		s := ListFoldersScreen()
+		return RootScreen().SwitchScreen(&s)
+	}
+	s := ListKeysScreenScoped(m.returnFolderID, m.returnFolderName)
+	return RootScreen().SwitchScreen(&s)
 }
 
 func (m screenInputSecret) Init() tea.Cmd {
@@ -108,10 +136,7 @@ func (m screenInputSecret) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 			case tea.KeyEsc:
-				screen := ListMethodsScreen()
-				screen.list.Select(1)
-
-				return screen, screen.Init()
+				return m.returnToOrigin()
 
 			case tea.KeyCtrlC:
 				output.ClearScreen()
@@ -152,9 +177,7 @@ func (m screenInputSecret) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.textInputs[2].SetValue("")
 						m.error = "Only base32 symbols and not empty Title/Secret"
 					} else {
-						screen := ListMethodsScreen()
-						screen.list.Select(0)
-						return RootScreen().SwitchScreen(&screen)
+						return m.returnToOrigin()
 					}
 
 				}

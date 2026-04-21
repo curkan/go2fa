@@ -50,27 +50,31 @@ Download the [latest release](https://github.com/curkan/go2fa/releases/latest) a
 Run with the command `go2fa`
 
 ### Viewing Keys
-On the key viewing screen, you can filter, delete, move, and copy the desired TOTP key.
+On the key viewing screen, you can filter, add, edit, delete, move, and copy the desired TOTP key.
 
+- `a` - add a new key (the current folder is preselected in the picker)
+- `e` - edit the selected key (title/description)
 - `d` - trigger deletion (Enter - confirm, Esc - go back)
 - `m` - move the selected key to another folder
 - `enter` - copy to clipboard. When copied, the left border becomes thicker.
 - `/` - filter by name
 
 ### Folders
-Keys can be organized into folders (Work / Home / Personal / …). From the main menu choose **Folders**; on top you'll see a synthetic **All keys** entry that behaves like the old unscoped list.
+Keys can be organized into folders (Work / Home / Personal / …). The folders list is the landing screen; on top you'll see a synthetic **All keys** entry that behaves like the old unscoped list.
 
 Inside the folders screen:
 
-- `a` - add a new folder
+- `a` - add a new key (the highlighted folder — or Default on *All keys* — is preselected)
+- `n` - create a new folder
 - `e` - rename the highlighted folder
 - `d` - delete the highlighted folder (its keys are moved to **Default**; the `Default` folder itself cannot be deleted)
 - `Enter` - open the folder
+- `Esc` / `q` - quit
 
 ### Adding Keys
 To add a new key, enter the **Name** and **SecretKey**; Description is optional.\
-SecretKey must be in base32 format, otherwise an error will be returned.\
-The fourth field is a folder picker — use `←` / `→` (or `h` / `l`) to cycle through available folders while it has focus.
+SecretKey must be in base32 format (spaces and lowercase are tolerated and normalized automatically), otherwise an error will be returned.\
+The fourth field is a folder picker — use `←` / `→` (or `h` / `l`) to cycle through available folders while it has focus. When opened from a folder or from the folders list, that folder is preselected.
 
 ## Vault
 A JSON-based vault is used for storing additional information in `vault.json`.\

@@ -16,11 +16,12 @@ import (
 
 // Custom bindings surfaced through the list's built-in help bar.
 var (
-	folderKeyOpen   = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "open"))
-	folderKeyAdd    = key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "new"))
-	folderKeyRename = key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "rename"))
-	folderKeyDelete = key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete"))
-	folderKeyBack   = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back"))
+	folderKeyOpen      = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "open"))
+	folderKeyAddKey    = key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "add key"))
+	folderKeyNewFolder = key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new folder"))
+	folderKeyRename    = key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "rename"))
+	folderKeyDelete    = key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete"))
+	folderKeyBack      = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "quit"))
 )
 
 // folderItem represents one row on the folders screen. An empty ID denotes
@@ -54,7 +55,7 @@ func (d folderItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 
 var folderHelp = lipgloss.NewStyle().Padding(0, 2).Foreground(lipgloss.Color("#D2D2D2"))
 
-var folderShortHelp = []key.Binding{folderKeyOpen, folderKeyAdd, folderKeyRename, folderKeyDelete, folderKeyBack}
+var folderShortHelp = []key.Binding{folderKeyOpen, folderKeyAddKey, folderKeyNewFolder, folderKeyRename, folderKeyDelete, folderKeyBack}
 
 type listFoldersModel struct {
 	list list.Model
@@ -72,6 +73,11 @@ func (m listFoldersModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			output.ClearScreen()
 			return m, tea.Quit
 		case "a":
+			f, _ := m.list.SelectedItem().(folderItem)
+			// For the synthetic "All keys" row f.id == "" → Default will be preselected.
+			screen := ScreenInputSecret(f.id, "", "", true)
+			return RootScreen().SwitchScreen(&screen)
+		case "n":
 			screen := ScreenCreateFolder()
 			return RootScreen().SwitchScreen(&screen)
 		case "e":
@@ -92,8 +98,8 @@ func (m listFoldersModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch msg.Type {
 		case tea.KeyEsc:
-			screen := ListMethodsScreen()
-			return RootScreen().SwitchScreen(&screen)
+			output.ClearScreen()
+			return m, tea.Quit
 
 		case tea.KeyEnter:
 			f, ok := m.list.SelectedItem().(folderItem)
@@ -135,7 +141,7 @@ func ListFoldersScreen() listFoldersModel {
 	}
 
 	l := list.New(items, folderItemDelegate{}, 40, listHeight)
-	l.Title = "Folders"
+	l.Title = "go2fa"
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
 	l.SetShowStatusBar(false)

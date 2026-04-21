@@ -12,8 +12,6 @@ import (
 )
 
 func main() {
-	screen_y := screens.ListFoldersScreen()
-
 	output := termenv.NewOutput(os.Stdout)
 	output.ClearScreen()
 
@@ -24,6 +22,8 @@ func main() {
 	if err != nil {
 		vault.Create()
 	}
+
+	screen_y := screens.ListFoldersScreen()
 
 	if _, err := tea.NewProgram(screen_y).Run(); err != nil {
 		fmt.Println("Error running program:", err)
