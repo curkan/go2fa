@@ -6,6 +6,7 @@ package screens
 import (
 	"fmt"
 	"go2fa/internal/addkey"
+	"go2fa/internal/storage"
 	"os"
 	"strings"
 
@@ -33,12 +34,21 @@ type (
 	errMsg error
 )
 
+// The form has 5 focusable positions: 3 text inputs (indexes 0..2),
+// the folder picker (index 3) and the submit button (index 4).
+const (
+	formFolderIdx = 3
+	formButtonIdx = 4
+)
+
 type screenInputSecret struct {
 	focusIndex int
-	textInputs     []textinput.Model
+	textInputs []textinput.Model
+	folders    []storage.Folder
+	folderIdx  int
 	cursorMode cursor.Mode
-	err       error
-	error string
+	err        error
+	error      string
 }
 
 func ScreenInputSecret() screenInputSecret {
@@ -69,6 +79,22 @@ func ScreenInputSecret() screenInputSecret {
 		m.textInputs[i] = t
 	}
 
+	// Load folders for the picker. If loading fails we silently fall back to
+	// a single Default folder so the form is still usable.
+	if store, err := storage.LoadStore(); err == nil {
+		m.folders = store.Folders
+	}
+	if len(m.folders) == 0 {
+		m.folders = []storage.Folder{{ID: storage.DefaultFolderID, Name: storage.DefaultFolderName}}
+	}
+	// Preselect Default when present.
+	for i, f := range m.folders {
+		if f.ID == storage.DefaultFolderID {
+			m.folderIdx = i
+			break
+		}
+	}
+
 	return m
 }
 
@@ -93,12 +119,33 @@ func (m screenInputSecret) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		}
 
+		// Folder picker cycling (left/right) works only while the folder
+		// field has focus, so it doesn't hijack normal typing.
+		if m.focusIndex == formFolderIdx {
+			switch msg.String() {
+			case "left", "h":
+				if len(m.folders) > 0 {
+					m.folderIdx = (m.folderIdx - 1 + len(m.folders)) % len(m.folders)
+				}
+				return m, nil
+			case "right", "l":
+				if len(m.folders) > 0 {
+					m.folderIdx = (m.folderIdx + 1) % len(m.folders)
+				}
+				return m, nil
+			}
+		}
+
 		switch msg.String() {
 			case "tab", "shift+tab", "enter", "up", "down":
 				s := msg.String()
 
-				if s == "enter" && m.focusIndex == len(m.textInputs) {
-					result := addkey.AddKey(m.textInputs)
+				if s == "enter" && m.focusIndex == formButtonIdx {
+					folderID := ""
+					if len(m.folders) > 0 {
+						folderID = m.folders[m.folderIdx].ID
+					}
+					result := addkey.AddKey(m.textInputs, folderID)
 
 					if !result {
 						m.focusIndex = 1
@@ -109,20 +156,20 @@ func (m screenInputSecret) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						screen.list.Select(0)
 						return RootScreen().SwitchScreen(&screen)
 					}
-					
+
 				}
 
-				// Cycle indexes
+				// Cycle indexes across 5 positions (inputs + folder + button).
 				if s == "up" || s == "shift+tab" {
 					m.focusIndex--
 				} else {
 					m.focusIndex++
 				}
 
-				if m.focusIndex > len(m.textInputs) {
+				if m.focusIndex > formButtonIdx {
 					m.focusIndex = 0
 				} else if m.focusIndex < 0 {
-					m.focusIndex = len(m.textInputs)
+					m.focusIndex = formButtonIdx
 				}
 
 				cmds := make([]tea.Cmd, len(m.textInputs))
@@ -170,14 +217,25 @@ func (m screenInputSecret) View() string {
 	fmt.Fprintf(&b, "\n\n")
 
 	for i := range m.textInputs {
-		b.WriteString(lipgloss.NewStyle().Padding(0,2).Render(m.textInputs[i].View()))
-		if i < len(m.textInputs)-1 {
-			b.WriteRune('\n')
-		}
+		b.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(m.textInputs[i].View()))
+		b.WriteRune('\n')
 	}
 
+	// Folder picker row.
+	folderName := ""
+	if len(m.folders) > 0 {
+		folderName = m.folders[m.folderIdx].Name
+	}
+	folderRow := fmt.Sprintf("Folder: < %s >", folderName)
+	if m.focusIndex == formFolderIdx {
+		folderRow = focusedStyle.Render(folderRow) + cursorModeHelpStyle.Render("  (←/→ to cycle)")
+	} else {
+		folderRow = blurredStyle.Render(folderRow)
+	}
+	b.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(folderRow))
+
 	button := &blurredButton
-	if m.focusIndex == len(m.textInputs) {
+	if m.focusIndex == formButtonIdx {
 		button = &focusedButton
 	}
 

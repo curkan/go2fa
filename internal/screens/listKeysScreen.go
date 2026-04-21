@@ -1,9 +1,8 @@
 package screens
 
 import (
-	"encoding/json"
 	"fmt"
-	"go2fa/internal/crypto"
+	"go2fa/internal/storage"
 	"go2fa/internal/structure"
 	"go2fa/internal/twofactor"
 	"io"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -19,14 +19,25 @@ import (
 	"golang.org/x/term"
 )
 
+// Custom key bindings surfaced through the list's built-in help bar.
+var (
+	keysKeyCopy   = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "copy"))
+	keysKeyDelete = key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete"))
+	keysKeyMove   = key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "move"))
+	keysKeyBack   = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back"))
+)
+
+var keysShortHelp = []key.Binding{keysKeyCopy, keysKeyDelete, keysKeyMove, keysKeyBack}
+
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 var globalCopied = false
 
 type itemKey struct {
-	title string
-	desc string
-	secret string
+	title    string
+	desc     string
+	secret   string
+	folderID string
 }
 
 type ItemDelegate struct{}
@@ -108,8 +119,10 @@ func (i itemKey) Description() string { return i.desc }
 func (i itemKey) FilterValue() string { return i.title }
 
 type listKeysModel struct {
-	list list.Model
+	list          list.Model
 	itemsKeysList []structure.TwoFactorItem
+	folderID      string
+	folderName    string
 }
 
 func (m listKeysModel) Init() tea.Cmd {
@@ -130,7 +143,7 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					output.ClearScreen()
 
 					return m, tea.Quit
-				case "d": 
+				case "d":
 					item, ok := m.list.SelectedItem().(itemKey)
 
 					if !ok {
@@ -138,12 +151,26 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 
 					twoFactorItem := structure.TwoFactorItem{
-						Title: item.title,
-						Desc: item.desc,
-						Secret: item.secret,
+						Title:    item.title,
+						Desc:     item.desc,
+						Secret:   item.secret,
+						FolderID: item.folderID,
 					}
 
-					screen := ScreenDeleteKey(m.itemsKeysList, twoFactorItem)
+					screen := ScreenDeleteKey(twoFactorItem, m.folderID, m.folderName)
+					return RootScreen().SwitchScreen(&screen)
+				case "m":
+					item, ok := m.list.SelectedItem().(itemKey)
+					if !ok {
+						return m, tick()
+					}
+					twoFactorItem := structure.TwoFactorItem{
+						Title:    item.title,
+						Desc:     item.desc,
+						Secret:   item.secret,
+						FolderID: item.folderID,
+					}
+					screen := ScreenMoveKey(twoFactorItem, m.folderID)
 					return RootScreen().SwitchScreen(&screen)
 				}
 		}
@@ -154,6 +181,10 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 
 			case tea.KeyEsc:
+				if m.folderID != "" || m.folderName != "" {
+					screen := ListFoldersScreen()
+					return RootScreen().SwitchScreen(&screen)
+				}
 				screen := ListMethodsScreen()
 				return RootScreen().SwitchScreen(&screen)
 
@@ -189,33 +220,49 @@ func (m listKeysModel) View() string {
 	return docStyle.Render(m.list.View())
 }
 
+// ListKeysScreen opens the unscoped (all keys) view. Kept for compatibility.
 func ListKeysScreen() listKeysModel {
-	var itemKeysList []structure.TwoFactorItem
-	vault := crypto.GetDataVault()
+	return ListKeysScreenScoped("", "")
+}
 
-	if len(vault.Db) > 0 {
-		err := json.Unmarshal([]byte(vault.Db), &itemKeysList)
-		if err != nil {
-			logrus.Fatal(err)
-		}
+// ListKeysScreenScoped opens the list scoped to folderID. An empty folderID
+// means "show all items" (the synthetic All keys scope).
+func ListKeysScreenScoped(folderID, folderName string) listKeysModel {
+	store, err := storage.LoadStore()
+	if err != nil {
+		logrus.Fatal(err)
 	}
 
-	var itemKeys []list.Item
+	itemsKeysList := storage.ItemsInFolder(store, folderID)
 
-	for _, item := range itemKeysList {
+	itemKeys := make([]list.Item, 0, len(itemsKeysList))
+	for _, item := range itemsKeysList {
 		itemKeys = append(itemKeys, itemKey{
-			title: item.Title,
-			desc:  item.Desc,
-			secret: item.Secret,
+			title:    item.Title,
+			desc:     item.Desc,
+			secret:   item.Secret,
+			folderID: item.FolderID,
 		})
 	}
 
+	l := list.New(itemKeys, ItemDelegate{}, 30, 20)
+	l.AdditionalShortHelpKeys = func() []key.Binding { return keysShortHelp }
+	l.AdditionalFullHelpKeys = func() []key.Binding { return keysShortHelp }
+
 	m := listKeysModel{
-		list: list.New(itemKeys, ItemDelegate{}, 30, 20),
-		itemsKeysList: itemKeysList,
+		list:          l,
+		itemsKeysList: itemsKeysList,
+		folderID:      folderID,
+		folderName:    folderName,
 	}
 
-	m.list.Title = "Active Keys"
+	title := "Active Keys"
+	if folderName != "" {
+		title = "Active Keys — " + folderName
+	} else if folderID == "" {
+		title = "Active Keys — All"
+	}
+	m.list.Title = title
 
 	return m
 }
@@ -225,4 +272,3 @@ func tick() tea.Cmd {
 		return tickMsg{}
 	})
 }
-

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"go2fa/internal/crypto"
+	"go2fa/internal/storage"
 	"go2fa/internal/structure"
 
 	"github.com/spf13/afero"
@@ -16,8 +17,11 @@ func TestDeleteKey_RemovesAndPersists(t *testing.T) {
 	crypto.CreateDirs()
 	crypto.GeneratePublicPrivateKeys()
 
-	// seed vault
-	items := []structure.TwoFactorItem{{Title: "GitHub", Desc: "main", Secret: "MFRGGZDFMZTWQ2LK"}, {Title: "AWS", Desc: "root", Secret: "MZXW6YTBOI======"}}
+	// seed vault in legacy v1 format to also exercise migration
+	items := []structure.TwoFactorItem{
+		{Title: "GitHub", Desc: "main", Secret: "MFRGGZDFMZTWQ2LK"},
+		{Title: "AWS", Desc: "root", Secret: "MZXW6YTBOI======"},
+	}
 	b, _ := json.Marshal(items)
 	v := crypto.GetEmptyVault()
 	v.Db = string(b)
@@ -25,23 +29,17 @@ func TestDeleteKey_RemovesAndPersists(t *testing.T) {
 		t.Fatal("seed SetDataVault failed")
 	}
 
-	// delete GitHub
-	list := append([]structure.TwoFactorItem(nil), items...)
-	ok := DeleteKey(&list, items[0])
+	ok := DeleteKey(items[0])
 	if !ok {
 		t.Fatal("DeleteKey returned false")
 	}
-	if len(list) != 1 || list[0].Title != "AWS" {
-		t.Fatalf("delete not applied in memory: %+v", list)
-	}
 
-	// persisted state
 	got := crypto.GetDataVault()
-	var persisted []structure.TwoFactorItem
-	if err := json.Unmarshal([]byte(got.Db), &persisted); err != nil {
+	var s storage.Store
+	if err := json.Unmarshal([]byte(got.Db), &s); err != nil {
 		t.Fatalf("persisted json invalid: %v", err)
 	}
-	if len(persisted) != 1 || persisted[0].Title != "AWS" {
-		t.Fatalf("unexpected persisted content: %+v", persisted)
+	if len(s.Items) != 1 || s.Items[0].Title != "AWS" {
+		t.Fatalf("unexpected persisted content: %+v", s.Items)
 	}
 }

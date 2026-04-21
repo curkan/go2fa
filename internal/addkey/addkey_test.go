@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"go2fa/internal/crypto"
+	"go2fa/internal/storage"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/spf13/afero"
@@ -27,18 +28,21 @@ func TestAddKey_ValidatesAndPersists(t *testing.T) {
 	inputs[1].SetValue("main")
 	inputs[2].SetValue("MFRGGZDFMZTWQ2LK") // base32
 
-	ok := AddKey(inputs)
+	ok := AddKey(inputs, "")
 	if !ok {
 		t.Fatalf("AddKey returned false")
 	}
 
 	v := crypto.GetDataVault()
-	var arr []map[string]string
-	if err := json.Unmarshal([]byte(v.Db), &arr); err != nil {
+	var s storage.Store
+	if err := json.Unmarshal([]byte(v.Db), &s); err != nil {
 		t.Fatalf("vault JSON invalid: %v", err)
 	}
-	if len(arr) != 1 || arr[0]["title"] != "GitHub" {
-		t.Fatalf("unexpected vault content: %+v", arr)
+	if len(s.Items) != 1 || s.Items[0].Title != "GitHub" {
+		t.Fatalf("unexpected vault content: %+v", s)
+	}
+	if s.Items[0].FolderID != storage.DefaultFolderID {
+		t.Fatalf("new item should fall back to Default, got %q", s.Items[0].FolderID)
 	}
 }
 
@@ -56,7 +60,7 @@ func TestAddKey_InvalidSecret(t *testing.T) {
 	inputs[1].SetValue("main")
 	inputs[2].SetValue("not-base32!!")
 
-	if ok := AddKey(inputs); ok {
+	if ok := AddKey(inputs, ""); ok {
 		t.Fatalf("AddKey should fail on invalid secret")
 	}
 }

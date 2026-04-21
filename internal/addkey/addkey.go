@@ -2,52 +2,43 @@ package addkey
 
 import (
 	"encoding/base32"
-	"encoding/json"
 	"fmt"
-	"go2fa/internal/crypto"
+	"go2fa/internal/storage"
 	"go2fa/internal/structure"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 )
 
-func AddKey(inputs []textinput.Model) bool {
-	var twoFactorItems []structure.TwoFactorItem
-	var twoFactorItem structure.TwoFactorItem
-
-	_, err := base32.StdEncoding.DecodeString(inputs[2].Value())
-
-	if err != nil {
+// AddKey inserts a new TOTP item into the vault. folderID selects the target
+// folder; an empty string means "use the Default folder".
+func AddKey(inputs []textinput.Model, folderID string) bool {
+	if _, err := base32.StdEncoding.DecodeString(inputs[2].Value()); err != nil {
 		return false
 	}
 
-	secret := strings.ToUpper(inputs[2].Value())
+	item := structure.TwoFactorItem{
+		Title:    inputs[0].Value(),
+		Desc:     inputs[1].Value(),
+		Secret:   strings.ToUpper(inputs[2].Value()),
+		FolderID: folderID,
+	}
 
-	twoFactorItem.Title = inputs[0].Value()
-	twoFactorItem.Desc = inputs[1].Value()
-	twoFactorItem.Secret = secret
-
-
-	if twoFactorItem.Title == "" {
+	if item.Title == "" || item.Secret == "" {
 		return false
 	}
 
-	if twoFactorItem.Secret == "" {
-		return false
-	}
-
-	vault := crypto.GetDataVault()
-
-	err = json.Unmarshal([]byte(vault.Db), &twoFactorItems)
+	store, err := storage.LoadStore()
 	if err != nil {
 		fmt.Println(err)
+		return false
 	}
 
-	twoFactorItems = append(twoFactorItems, twoFactorItem)
-	data, _ := json.Marshal(twoFactorItems)
-	vault.Db = string(data)
+	storage.AddItem(&store, item)
 
-	crypto.SetDataVault(vault)
-
+	if err := storage.SaveStore(store); err != nil {
+		fmt.Println(err)
+		return false
+	}
 	return true
 }

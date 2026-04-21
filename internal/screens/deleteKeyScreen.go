@@ -14,52 +14,49 @@ import (
 
 type deleteKeyScreen struct {
 	TwoFactorItem structure.TwoFactorItem
-	itemKeysList []structure.TwoFactorItem
+	fromFolderID  string
+	fromFolder    string
 }
 
 var (
-	warning = lipgloss.NewStyle().Bold(true).MarginTop(1).Padding(0,2).Foreground(lipgloss.Color("#FFB775"))
-	help = lipgloss.NewStyle().Bold(false).Padding(0,2).Foreground(lipgloss.Color("#D2D2D2"))
+	warning = lipgloss.NewStyle().Bold(true).MarginTop(1).Padding(0, 2).Foreground(lipgloss.Color("#FFB775"))
+	help    = lipgloss.NewStyle().Bold(false).Padding(0, 2).Foreground(lipgloss.Color("#D2D2D2"))
 )
 
-func ScreenDeleteKey(itemsKeysList []structure.TwoFactorItem, TwoFactorItem structure.TwoFactorItem) deleteKeyScreen {
+// ScreenDeleteKey builds the confirm-delete screen. fromFolderID/fromFolder
+// record where the user came from so that we can return them to the same
+// scoped list on cancel / after confirmation.
+func ScreenDeleteKey(target structure.TwoFactorItem, fromFolderID, fromFolder string) deleteKeyScreen {
 	return deleteKeyScreen{
-		TwoFactorItem: TwoFactorItem,
-		itemKeysList: itemsKeysList,
+		TwoFactorItem: target,
+		fromFolderID:  fromFolderID,
+		fromFolder:    fromFolder,
 	}
 }
 
-func (m deleteKeyScreen) Init() tea.Cmd {
-	return nil
-}
+func (m deleteKeyScreen) Init() tea.Cmd { return nil }
 
 func (m deleteKeyScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-
 	case tea.KeyMsg:
 		output := termenv.NewOutput(os.Stdout)
 
 		switch msg.String() {
-			case "q", "ctrl+c":
-				output.ClearScreen()
+		case "q", "ctrl+c":
+			output.ClearScreen()
+			return m, tea.Quit
 
-				return m, tea.Quit
-
-			case "enter":
-
-				result := deletekey.DeleteKey(&m.itemKeysList, m.TwoFactorItem)
-
-				if result {
-					screen := ListKeysScreen()
-					return RootScreen().SwitchScreen(&screen)
-				}
-			case "esc":
-				screen := ListKeysScreen()
+		case "enter":
+			if deletekey.DeleteKey(m.TwoFactorItem) {
+				screen := ListKeysScreenScoped(m.fromFolderID, m.fromFolder)
 				return RootScreen().SwitchScreen(&screen)
 			}
+		case "esc":
+			screen := ListKeysScreenScoped(m.fromFolderID, m.fromFolder)
+			return RootScreen().SwitchScreen(&screen)
 		}
-	var cmd tea.Cmd
-	return m, cmd
+	}
+	return m, nil
 }
 
 func (m deleteKeyScreen) View() string {
@@ -71,4 +68,3 @@ func (m deleteKeyScreen) View() string {
 
 	return b.String()
 }
-

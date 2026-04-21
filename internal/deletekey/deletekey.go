@@ -1,31 +1,37 @@
 package deletekey
 
 import (
-	"encoding/json"
-	"go2fa/internal/crypto"
+	"fmt"
+	"go2fa/internal/storage"
 	"go2fa/internal/structure"
 )
 
-func DeleteKey(itemKeysList *[]structure.TwoFactorItem, TwoFactorItem structure.TwoFactorItem ) bool {
-	*itemKeysList = deleteItem(*itemKeysList, TwoFactorItem)
+// DeleteKey removes the first item matching the target by (title, desc, secret, folder_id)
+// — folder_id is included in the match to prevent cross-folder collateral deletes.
+func DeleteKey(target structure.TwoFactorItem) bool {
+	store, err := storage.LoadStore()
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
 
-	vault := crypto.GetDataVault()
+	matcher := func(it structure.TwoFactorItem) bool {
+		if it.Title != target.Title || it.Desc != target.Desc || it.Secret != target.Secret {
+			return false
+		}
+		if target.FolderID == "" {
+			return true
+		}
+		return it.FolderID == target.FolderID
+	}
 
-	data, _ := json.Marshal(itemKeysList)
-	vault.Db = string(data)
+	if !storage.DeleteItem(&store, matcher) {
+		return false
+	}
 
-	crypto.SetDataVault(vault)
-
+	if err := storage.SaveStore(store); err != nil {
+		fmt.Println(err)
+		return false
+	}
 	return true
-}
-
-
-func deleteItem(items []structure.TwoFactorItem, itemToDelete structure.TwoFactorItem) []structure.TwoFactorItem {
-    for i, item := range items {
-        if item.Title == itemToDelete.Title && item.Desc == itemToDelete.Desc && item.Secret == itemToDelete.Secret {
-            return append(items[:i], items[i+1:]...)
-        }
-    }
-
-    return items
 }

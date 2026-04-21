@@ -69,6 +69,12 @@ func backupVault() bool {
 
 }
 
+// BackupVault produces a timestamped copy of the current vault.json under
+// ~/.local/share/go2fa/backups/. Returns false if the backup failed.
+func BackupVault() bool {
+	return backupVault()
+}
+
 func CreateDirs() {
 	homeDir := os.Getenv("HOME")
 	filePath := filepath.Join(homeDir, ".local", "share", "go2fa")

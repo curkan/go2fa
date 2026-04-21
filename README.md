@@ -50,15 +50,27 @@ Download the [latest release](https://github.com/curkan/go2fa/releases/latest) a
 Run with the command `go2fa`
 
 ### Viewing Keys
-On the key viewing screen, you can filter, delete, and copy the desired TOTP key.
+On the key viewing screen, you can filter, delete, move, and copy the desired TOTP key.
 
 - `d` - trigger deletion (Enter - confirm, Esc - go back)
+- `m` - move the selected key to another folder
 - `enter` - copy to clipboard. When copied, the left border becomes thicker.
 - `/` - filter by name
 
+### Folders
+Keys can be organized into folders (Work / Home / Personal / …). From the main menu choose **Folders**; on top you'll see a synthetic **All keys** entry that behaves like the old unscoped list.
+
+Inside the folders screen:
+
+- `a` - add a new folder
+- `r` - rename the highlighted folder
+- `d` - delete the highlighted folder (its keys are moved to **Default**; the `Default` folder itself cannot be deleted)
+- `Enter` - open the folder
+
 ### Adding Keys
 To add a new key, enter the **Name** and **SecretKey**; Description is optional.\
-SecretKey must be in base32 format, otherwise an error will be returned.
+SecretKey must be in base32 format, otherwise an error will be returned.\
+The fourth field is a folder picker — use `←` / `→` (or `h` / `l`) to cycle through available folders while it has focus.
 
 ## Vault
 A JSON-based vault is used for storing additional information in `vault.json`.\
@@ -98,6 +110,11 @@ go2fa
 ```
 
 `stores` - vaults, currently only vault.json
+
+### Vault format v2 & rollback
+Starting from the folders release the decrypted `db` payload is a JSON object with explicit `folders` and `items` arrays (version `2`). Older vaults (a bare JSON array) are migrated **lazily in memory on read** — the file on disk stays v1 until your first mutation (add / delete / move / create-folder / rename / delete-folder). On first load of a v1 vault a one-off backup is produced in `backups/` as an extra safety net.
+
+**Downgrading back to a pre-folders binary?** An old binary cannot parse the v2 object and will error out on start. Recover by replacing `stores/vault.json` with the most recent `backups/backup_*_vault.json` snapshot (those are still v1 if they were written before your first v2 save).
 
 ## Testing
 

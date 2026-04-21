@@ -54,11 +54,11 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 func ListMethodsScreen() ListMethodsModel {
 	items := []list.Item{
-		item{ title: "Show keys", alias: "show_keys" },
+		item{ title: "Folders", alias: "folders" },
 		item{ title: "Add key", alias: "add_key" },
 	}
 
-	const defaultWidth = 20
+	const defaultWidth = 60
 
 	l := list.New(items, itemDelegate{}, defaultWidth, listHeight)
 	l.Title = "GO2FA"
@@ -111,8 +111,8 @@ func (m ListMethodsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return RootScreen().SwitchScreen(&screen_y)
 					}
 
-					if item.alias == "show_keys" {
-						screen_y := ListKeysScreen()
+					if item.alias == "folders" {
+						screen_y := ListFoldersScreen()
 						return RootScreen().SwitchScreen(&screen_y)
 					}
 				}
