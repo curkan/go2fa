@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	screen_y := screens.ListMethodsScreen()
+	screen_y := screens.ListFoldersScreen()
 
 	output := termenv.NewOutput(os.Stdout)
 	output.ClearScreen()

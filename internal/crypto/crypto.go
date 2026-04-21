@@ -42,6 +42,19 @@ func GeneratePublicPrivateKeys() {
 	homeDir := os.Getenv("HOME")
 	filePath := filepath.Join(homeDir, ".local", "share", "go2fa", "keys")
     err := FS.MkdirAll(filePath, os.ModePerm)
+    if err != nil {
+        panic(err)
+    }
+
+    // Never overwrite an existing key pair — doing so would make every
+    // backup/vault encrypted with the old public key unrecoverable.
+    privPath := filepath.Join(filePath, "private.pem")
+    pubPath := filepath.Join(filePath, "public.pem")
+    privExists, _ := afero.Exists(FS, privPath)
+    pubExists, _ := afero.Exists(FS, pubPath)
+    if privExists && pubExists {
+        return
+    }
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
     if err != nil {

@@ -63,7 +63,7 @@ Keys can be organized into folders (Work / Home / Personal / …). From the main
 Inside the folders screen:
 
 - `a` - add a new folder
-- `r` - rename the highlighted folder
+- `e` - rename the highlighted folder
 - `d` - delete the highlighted folder (its keys are moved to **Default**; the `Default` folder itself cannot be deleted)
 - `Enter` - open the folder
 

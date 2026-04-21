@@ -18,7 +18,7 @@ import (
 var (
 	folderKeyOpen   = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "open"))
 	folderKeyAdd    = key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "new"))
-	folderKeyRename = key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "rename"))
+	folderKeyRename = key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "rename"))
 	folderKeyDelete = key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete"))
 	folderKeyBack   = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back"))
 )
@@ -74,7 +74,7 @@ func (m listFoldersModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "a":
 			screen := ScreenCreateFolder()
 			return RootScreen().SwitchScreen(&screen)
-		case "r":
+		case "e":
 			f, ok := m.list.SelectedItem().(folderItem)
 			if !ok || f.id == "" {
 				return m, nil

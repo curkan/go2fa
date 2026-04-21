@@ -163,6 +163,19 @@ func DeleteItem(s *Store, match func(structure.TwoFactorItem) bool) bool {
 	return false
 }
 
+// UpdateItemMeta updates Title and Desc of the first item matched by `match`.
+// Secret and FolderID are not touched (use MoveItem for that).
+func UpdateItemMeta(s *Store, match func(structure.TwoFactorItem) bool, title, desc string) bool {
+	for i, it := range s.Items {
+		if match(it) {
+			s.Items[i].Title = title
+			s.Items[i].Desc = desc
+			return true
+		}
+	}
+	return false
+}
+
 // MoveItem reassigns item at index to folderID. The target folder must exist.
 func MoveItem(s *Store, index int, folderID string) error {
 	if index < 0 || index >= len(s.Items) {

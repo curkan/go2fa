@@ -22,12 +22,13 @@ import (
 // Custom key bindings surfaced through the list's built-in help bar.
 var (
 	keysKeyCopy   = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "copy"))
+	keysKeyEdit   = key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit"))
 	keysKeyDelete = key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete"))
 	keysKeyMove   = key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "move"))
 	keysKeyBack   = key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back"))
 )
 
-var keysShortHelp = []key.Binding{keysKeyCopy, keysKeyDelete, keysKeyMove, keysKeyBack}
+var keysShortHelp = []key.Binding{keysKeyCopy, keysKeyEdit, keysKeyDelete, keysKeyMove, keysKeyBack}
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
@@ -171,6 +172,19 @@ func (m listKeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						FolderID: item.folderID,
 					}
 					screen := ScreenMoveKey(twoFactorItem, m.folderID)
+					return RootScreen().SwitchScreen(&screen)
+				case "e":
+					item, ok := m.list.SelectedItem().(itemKey)
+					if !ok {
+						return m, tick()
+					}
+					twoFactorItem := structure.TwoFactorItem{
+						Title:    item.title,
+						Desc:     item.desc,
+						Secret:   item.secret,
+						FolderID: item.folderID,
+					}
+					screen := ScreenEditKey(twoFactorItem, m.folderID, m.folderName)
 					return RootScreen().SwitchScreen(&screen)
 				}
 		}
